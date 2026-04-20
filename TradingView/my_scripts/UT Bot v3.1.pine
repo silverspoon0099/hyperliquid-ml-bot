@@ -1,0 +1,262 @@
+//@version=6
+indicator("UT Bot Webhook v3.1 - Flip Bot", overlay=true, max_labels_count=100, max_lines_count=100, max_bars_back=5000)
+
+// =========================
+// UT Bot Core Inputs
+// =========================
+groupUT = "UT Bot"
+a_buy  = input.float(1.5, "Buy Sensitivity (Multiplier)",  group=groupUT, minval=0)
+c_buy  = input.int(5,     "Buy ATR Period (0 = disable)",  group=groupUT, minval=0)
+a_sell = input.float(1.5, "Sell Sensitivity (Multiplier)", group=groupUT, minval=0)
+c_sell = input.int(5,     "Sell ATR Period (0 = disable)", group=groupUT, minval=0)
+emaPeriod = input.int(3,  "EMA Period",                    group=groupUT, minval=1)
+
+groupFilt    = "Signal Filters"
+tickConfirm   = input.int(2,     "Tick Stability (realtime)", group=groupFilt, minval=1, tooltip="Signal must hold this many consecutive ticks before firing (realtime only)")
+confThreshold = input.float(0, "Confidence Threshold (ATR mult)", group=groupFilt, minval=0, step=0.05, tooltip="Price must move this × ATR past the pre-flip trail level to qualify")
+
+showTrails   = input.bool(true, "Show Trail Lines (DEBUG)", group=groupUT)
+showBarcolor = input.bool(true, "Show Bot Candle Color",    group=groupUT)
+
+// =========================
+// UT Bot Calculations
+// =========================
+buyEnabled  = (c_buy  > 0) and (a_buy  > 0)
+sellEnabled = (c_sell > 0) and (a_sell > 0)
+
+src_buy   = close
+ema_buy   = ta.ema(src_buy, emaPeriod)
+atr_buy   = buyEnabled  ? ta.atr(c_buy)  : na
+nLoss_buy = buyEnabled  ? a_buy  * atr_buy  : na
+
+var float trail_buy = na
+if buyEnabled
+    if na(trail_buy[1])
+        trail_buy := src_buy - nLoss_buy
+    else
+        if src_buy > trail_buy[1] and src_buy[1] > trail_buy[1]
+            trail_buy := math.max(trail_buy[1], src_buy - nLoss_buy)
+        else if src_buy < trail_buy[1] and src_buy[1] < trail_buy[1]
+            trail_buy := math.min(trail_buy[1], src_buy + nLoss_buy)
+        else
+            trail_buy := src_buy > trail_buy[1] ? src_buy - nLoss_buy : src_buy + nLoss_buy
+else
+    trail_buy := na
+
+src_sell   = close
+ema_sell   = ta.ema(src_sell, emaPeriod)
+atr_sell   = sellEnabled ? ta.atr(c_sell) : na
+nLoss_sell = sellEnabled ? a_sell * atr_sell : na
+
+var float trail_sell = na
+if sellEnabled
+    if na(trail_sell[1])
+        trail_sell := src_sell + nLoss_sell
+    else
+        if src_sell > trail_sell[1] and src_sell[1] > trail_sell[1]
+            trail_sell := math.max(trail_sell[1], src_sell - nLoss_sell)
+        else if src_sell < trail_sell[1] and src_sell[1] < trail_sell[1]
+            trail_sell := math.min(trail_sell[1], src_sell + nLoss_sell)
+        else
+            trail_sell := src_sell > trail_sell[1] ? src_sell - nLoss_sell : src_sell + nLoss_sell
+else
+    trail_sell := na
+
+// =========================================================
+// FLIP BOT ENGINE
+// =========================================================
+
+// KEY FIX: varip so botState persists between realtime ticks within the same bar.
+// With plain `var`, botState resets to previous bar's value on every tick,
+// causing duplicate signals and broken state circles.
+varip int botState = 0  // 1 = long, -1 = short, 0 = flat
+var   int confirmedState = 0  // last bar-close confirmed state — cancel reverts here
+
+// Event flags — regular booleans, reset each script execution
+evtOpenLong       = false
+evtOpenShort      = false
+evtCancelLong     = false   // bar close: intrabar long rejected → close it
+evtCancelShort    = false   // bar close: intrabar short rejected → close it
+evtFlipCloseLong  = false   // bar close: flip confirmed SHORT→LONG → close old long wallet
+evtFlipCloseShort = false   // bar close: flip confirmed LONG→SHORT → close old short wallet
+
+// Per-bar locks (varip: persist between ticks, reset on new bar)
+varip bool entryLockThisBar = false
+varip int  entrySideThisBar = 0    // which side opened intrabar (1 / -1 / 0)
+
+// Visual latches — once set true, stay visible the whole bar on realtime
+// (regular bool evtOpenLong resets every tick → marker disappears after 1 tick)
+varip bool barShowLong  = false
+varip bool barShowShort = false
+
+// Cross latches — latch as soon as cross detected, cleared each new bar
+varip bool crossLongLatched  = false
+varip bool crossShortLatched = false
+
+// Tick stability — count consecutive ticks signal holds (varip)
+varip int longTickCount  = 0
+varip int shortTickCount = 0
+
+if barstate.isnew
+    entryLockThisBar  := false
+    entrySideThisBar  := 0
+    barShowLong       := false
+    barShowShort      := false
+    // NOTE: cross latches NOT reset here — they persist until consumed or invalidated
+    longTickCount     := 0
+    shortTickCount    := 0
+
+// Cross detection — latch persists across bars.
+// Cleared only when: (1) entry fires, or (2) opposite cross fires.
+ema_buy_cross    = ta.crossover(ema_buy, trail_buy)
+price_buy_cross  = ta.crossover(close, trail_buy)
+ema_sell_cross   = ta.crossunder(ema_sell, trail_sell)
+price_sell_cross = ta.crossunder(close, trail_sell)
+
+if ema_buy_cross or price_buy_cross
+    crossLongLatched  := true
+    crossShortLatched := false   // going long invalidates short cross
+if ema_sell_cross or price_sell_cross
+    crossShortLatched := true
+    crossLongLatched  := false   // going short invalidates long cross
+
+buy_signal_raw  = buyEnabled  and not na(trail_buy)  and (src_buy  > trail_buy)  and crossLongLatched
+sell_signal_raw = sellEnabled and not na(trail_sell) and (src_sell < trail_sell) and crossShortLatched
+
+// Tick stability: signal must hold N consecutive ticks (realtime only)
+if buy_signal_raw
+    longTickCount += 1
+else
+    longTickCount := 0
+
+if sell_signal_raw
+    shortTickCount += 1
+else
+    shortTickCount := 0
+
+tickOkLong  = barstate.isrealtime ? longTickCount  >= tickConfirm : true
+tickOkShort = barstate.isrealtime ? shortTickCount >= tickConfirm : true
+
+// Confidence: distance from pre-flip trail (trail[1] = last bar's confirmed level).
+// When signal fires, close is guaranteed past trail[1], so distance is always positive.
+// Blocks barely-touch crosses while allowing strong moves.
+confOkLong  = (close - nz(trail_buy[1],  close)) > nz(atr_buy  * confThreshold, 0)
+confOkShort = (nz(trail_sell[1], close) - close) > nz(atr_sell * confThreshold, 0)
+
+longReady  = buy_signal_raw  and tickOkLong  and confOkLong
+shortReady = sell_signal_raw and tickOkShort and confOkShort
+
+// =========================================================
+// INTRABAR ENTRY EXECUTION
+// Only one entry per bar. Flip is ATOMIC — no close alert sent.
+// The Hyperliquid bot treats open-opposite as a flip implicitly.
+// =========================================================
+if not entryLockThisBar
+    if longReady and botState <= 0
+        evtOpenLong      := true
+        barShowLong      := true
+        botState         := 1
+        entrySideThisBar := 1
+        entryLockThisBar := true
+        crossLongLatched := false   // consumed
+
+    else if shortReady and botState >= 0
+        evtOpenShort     := true
+        barShowShort     := true
+        botState         := -1
+        entrySideThisBar := -1
+        entryLockThisBar := true
+        crossShortLatched := false  // consumed
+
+// =========================================================
+// BAR-CLOSE REVALIDATION
+// If the intrabar entry is NOT confirmed at bar close, cancel it.
+// Cancel alert fires here (bar close), not intrabar.
+// Cross marks (X) always appear at bar close — never intrabar.
+// =========================================================
+confirmedLongBias  = barstate.isconfirmed and buyEnabled  and not na(trail_buy)  and close > trail_buy
+confirmedShortBias = barstate.isconfirmed and sellEnabled and not na(trail_sell) and close < trail_sell
+
+if barstate.isconfirmed
+    if entrySideThisBar == 1
+        if confirmedLongBias
+            // Long confirmed. If was short before → flip: close old short wallet.
+            if confirmedState == -1
+                evtFlipCloseShort := true
+            confirmedState := 1
+        else
+            evtCancelLong := true
+            botState      := confirmedState  // revert — e.g. back to -1 if was short
+
+    else if entrySideThisBar == -1
+        if confirmedShortBias
+            // Short confirmed. If was long before → flip: close old long wallet.
+            if confirmedState == 1
+                evtFlipCloseLong := true
+            confirmedState := -1
+        else
+            evtCancelShort := true
+            botState       := confirmedState  // revert — e.g. back to 1 if was long
+
+    else
+        confirmedState := botState  // no entry this bar: sync confirmed to live state
+
+// =========================================================
+// VISUALS
+// botState is varip → correctly reflects live state every tick
+// =========================================================
+plot(showTrails and buyEnabled  ? trail_buy  : na, title="Trail Buy",  color=color.new(color.green, 30), linewidth=2)
+plot(showTrails and sellEnabled ? trail_sell : na, title="Trail Sell", color=color.new(color.red,   30), linewidth=2)
+
+botFillColor =
+     botState == 1  ? color.new(color.green, 75) :
+     botState == -1 ? color.new(color.red,   75) : na
+barcolor(showBarcolor ? botFillColor : na)
+
+// Entry markers — use barShow* latch (varip) so the triangle stays visible
+// all bar on realtime ticks, not just the single tick the signal fired
+plotshape(barShowLong,  title="OPEN LONG",  style=shape.triangleup,   location=location.belowbar, size=size.small, color=color.lime, text="L")
+plotshape(barShowShort, title="OPEN SHORT", style=shape.triangledown, location=location.abovebar, size=size.small, color=color.red,  text="S")
+
+// Cancel markers (bar close: intrabar entry rejected)
+plotshape(evtCancelLong,  title="CANCEL LONG",  style=shape.xcross, location=location.abovebar, size=size.tiny, color=color.orange)
+plotshape(evtCancelShort, title="CANCEL SHORT", style=shape.xcross, location=location.belowbar, size=size.tiny, color=color.aqua)
+
+// State dots — now reliable because botState is varip
+plotshape(botState == 1,  title="IN LONG",  style=shape.circle, location=location.bottom, size=size.tiny, color=color.new(color.green, 50))
+plotshape(botState == -1, title="IN SHORT", style=shape.circle, location=location.top,    size=size.tiny, color=color.new(color.red,   50))
+
+// =========================================================
+// ALERTS: JSON — Flip Bot
+//
+// INTRABAR (alert.freq_all):
+//   open-long   → bot opens long  (hedge window starts if was short)
+//   open-short  → bot opens short (hedge window starts if was long)
+//
+// BAR-CLOSE (alert.freq_all):
+//   close-long  reason=cancel → intrabar long rejected, close it
+//   close-long  reason=flip   → flip confirmed LONG→SHORT, close old long
+//   close-short reason=cancel → intrabar short rejected, close it
+//   close-short reason=flip   → flip confirmed SHORT→LONG, close old short
+// =========================================================
+if evtOpenLong
+    alert('{"side":"long","action":"open","ticker":"' + syminfo.ticker +
+          '","price":' + str.tostring(close) + ',"time":' + str.tostring(time) + '}',
+          alert.freq_all)
+
+if evtOpenShort
+    alert('{"side":"short","action":"open","ticker":"' + syminfo.ticker +
+          '","price":' + str.tostring(close) + ',"time":' + str.tostring(time) + '}',
+          alert.freq_all)
+
+if evtCancelLong or evtFlipCloseLong
+    _rsn = evtFlipCloseLong ? "flip" : "cancel"
+    alert('{"side":"long","action":"close","reason":"' + _rsn + '","ticker":"' + syminfo.ticker +
+          '","price":' + str.tostring(close) + ',"time":' + str.tostring(time) + '}',
+          alert.freq_all)
+
+if evtCancelShort or evtFlipCloseShort
+    _rsn = evtFlipCloseShort ? "flip" : "cancel"
+    alert('{"side":"short","action":"close","reason":"' + _rsn + '","ticker":"' + syminfo.ticker +
+          '","price":' + str.tostring(close) + ',"time":' + str.tostring(time) + '}',
+          alert.freq_all)

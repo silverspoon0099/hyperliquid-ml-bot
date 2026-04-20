@@ -1,0 +1,43 @@
+# ML Trading Bot — Phase 1 dependencies
+# Python 3.10+ (3.11+ recommended)
+
+# Data
+pandas>=2.0.0
+numpy>=1.24.0
+pyarrow>=14.0.0          # parquet I/O
+
+# Technical analysis
+# All indicators in features/ are hand-rolled on pandas/numpy (see features/_common.py).
+# TA-Lib + pandas-ta are NOT imported anywhere; uncomment only if a future feature needs them.
+# Note: pandas-ta 0.3.14b0 was yanked from PyPI; use pandas-ta-classic or GitHub install.
+# TA-Lib>=0.4.28          # apt install libta-lib0 libta-lib-dev (system dep)
+# pandas-ta-classic       # active fork; replaces the yanked pandas-ta
+
+# Exchange / data fetch
+ccxt>=4.2.0              # Binance Futures historical OHLCV
+hyperliquid-python-sdk>=0.4.0
+websockets>=12.0
+aiohttp>=3.9.0
+requests>=2.31.0
+
+# ML
+lightgbm>=4.0.0
+scikit-learn>=1.3.0
+optuna>=3.5.0
+shap>=0.44.0
+
+# Database
+psycopg[binary,pool]>=3.1.0   # PostgreSQL driver + connection pool
+sqlalchemy>=2.0.0             # for parquet export queries (read-only convenience)
+
+# Utilities
+PyYAML>=6.0
+loguru>=0.7.0
+schedule>=1.2.0
+python-dateutil>=2.8.2
+tqdm>=4.66.0
+python-dotenv>=1.0.0          # load .env into os.environ
+
+# Development
+ipykernel>=6.27.0
+jupyter>=1.0.0

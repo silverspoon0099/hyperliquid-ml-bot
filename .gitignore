@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# Data — never commit market data or models
+data/storage/
+*.parquet
+*.csv
+*.pkl
+*.joblib
+model/models/*.txt
+model/models/*.bin
+
+# Logs
+logs/
+*.log
+
+# Secrets
+.env
+secrets.yaml
+keys/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+.DS_Store

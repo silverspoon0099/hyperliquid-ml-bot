@@ -1,0 +1,58 @@
+//@version=6
+indicator(shorttitle="BB_KC_ATR_K", title="BB & KC Channels with ATR Ratio", overlay=true)
+
+// Inputs
+lengthBB  = input.int(20, title="BB Length")
+multBB    = input.float(2.0, title="BB Multiplier")
+lengthKC  = input.int(20, title="KC Length")
+multKC    = input.float(1.5, title="KC Multiplier")
+useTR     = input.bool(true, title="Use True Range (KC)")
+showATR   = input.bool(false, title="Show ATR/Price Label")
+
+// Bollinger Bands
+basisBB = ta.sma(close, lengthBB)
+devBB   = multBB * ta.stdev(close, lengthBB)
+upperBB = basisBB + devBB
+lowerBB = basisBB - devBB
+
+// Keltner Channels
+basisKC  = ta.sma(close, lengthKC)
+rangeVal = useTR ? ta.tr : (high - low)
+rangema  = ta.sma(rangeVal, lengthKC)
+upperKC  = basisKC + rangema * multKC
+lowerKC  = basisKC - rangema * multKC
+
+// Squeeze detection
+sqzOn  = (lowerBB > lowerKC) and (upperBB < upperKC)
+sqzOff = (lowerBB < lowerKC) and (upperBB > upperKC)
+
+// ATR / Price ratio
+atrVal   = ta.sma(ta.tr, lengthKC)
+atrRatio = (atrVal / close) * 100
+
+// Plot BB
+pBBu = plot(upperBB, color=color.new(color.blue, 0), linewidth=2, title="BB Upper")
+plot(basisBB, color=color.new(color.blue, 50), linewidth=1, title="BB Basis")
+pBBl = plot(lowerBB, color=color.new(color.blue, 0), linewidth=2, title="BB Lower")
+
+// Plot KC
+pKCu = plot(upperKC, color=color.new(color.orange, 0), linewidth=2, title="KC Upper")
+plot(basisKC, color=color.new(color.orange, 50), linewidth=1, title="KC Basis")
+pKCl = plot(lowerKC, color=color.new(color.orange, 0), linewidth=2, title="KC Lower")
+
+// Fill between BB bands
+bbFillColor = sqzOn ? color.new(color.red, 80) : sqzOff ? color.new(color.green, 80) : color.new(color.gray, 90)
+fill(pBBu, pBBl, color=bbFillColor, title="BB Fill")
+
+// Fill between KC bands
+fill(pKCu, pKCl, color=color.new(color.orange, 90), title="KC Fill")
+
+// Background color during squeeze
+bgcolor(sqzOn ? color.new(color.red, 93) : na, title="Squeeze Active BG")
+bgcolor(sqzOff ? color.new(color.green, 93) : na, title="Squeeze Off BG")
+
+// ATR/Price ratio label
+if showATR and barstate.islast
+    labelText = "ATR/Price: " + str.tostring(atrRatio, "#.##") + "%"
+    labelColor = atrRatio < 0.5 ? color.red : atrRatio < 1.0 ? color.yellow : color.green
+    label.new(bar_index + 2, high, labelText, color=labelColor, textcolor=color.white, size=size.normal)

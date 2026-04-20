@@ -1,0 +1,405 @@
+//@version=6
+indicator("UT Bot Webhook v4.0 - Dynamic Trail", overlay=true, max_labels_count=100, max_lines_count=100, max_bars_back=5000)
+
+// =========================
+// UT Bot Core Inputs
+// =========================
+groupUT = "UT Bot"
+a_buy  = input.float(1.5, "Buy Sensitivity (Base Multiplier)",  group=groupUT, minval=0)
+c_buy  = input.int(5,     "Buy ATR Period (0 = disable)",  group=groupUT, minval=0)
+a_sell = input.float(1.5, "Sell Sensitivity (Base Multiplier)", group=groupUT, minval=0)
+c_sell = input.int(5,     "Sell ATR Period (0 = disable)", group=groupUT, minval=0)
+emaPeriod = input.int(3,  "EMA Period",                    group=groupUT, minval=1)
+
+groupFilt    = "Signal Filters"
+tickConfirm   = input.int(2,     "Tick Stability (realtime)", group=groupFilt, minval=1, tooltip="Signal must hold this many consecutive ticks before firing (realtime only)")
+confThreshold = input.float(0, "Confidence Threshold (ATR mult)", group=groupFilt, minval=0, step=0.05, tooltip="Price must move this × ATR past the pre-flip trail level to qualify")
+
+// =========================
+// Dynamic Trail Inputs
+// =========================
+groupDyn     = "Dynamic Trail"
+dynEnabled   = input.bool(true,  "Enable Dynamic Multiplier",       group=groupDyn)
+multMin      = input.float(0.5,  "Min Multiplier (tight trail)",    group=groupDyn, minval=0.1, step=0.1)
+multMax      = input.float(2.0,  "Max Multiplier (wide trail)",     group=groupDyn, minval=0.5, step=0.1)
+momLookback  = input.int(24,     "Momentum Normalization Lookback", group=groupDyn, minval=10, tooltip="24 = 2 hours on 5min chart")
+effLen       = input.int(14,     "Efficiency Ratio Length",         group=groupDyn, minval=5,  tooltip="14 = 70 minutes on 5min chart")
+atrShortLen  = input.int(5,      "ATR Short Length",                group=groupDyn, minval=2)
+atrLongLen   = input.int(14,     "ATR Long Length",                 group=groupDyn, minval=5)
+w1           = input.float(0.4,  "Weight: Momentum",               group=groupDyn, minval=0, maxval=1, step=0.05)
+w2           = input.float(0.35, "Weight: Efficiency",              group=groupDyn, minval=0, maxval=1, step=0.05)
+w3           = input.float(0.25, "Weight: Volatility",              group=groupDyn, minval=0, maxval=1, step=0.05)
+dynSmooth    = input.int(3,      "Dynamic Mult Smoothing (EMA)",    group=groupDyn, minval=1)
+
+// =========================
+// Squeeze Filter & BB/KC Visual
+// =========================
+groupSqz     = "Squeeze & BB/KC"
+sqzEnabled   = input.bool(false, "Block Entries During Squeeze",  group=groupSqz)
+showBBKC     = input.bool(true,  "Show BB & KC Channels",         group=groupSqz)
+showBBKCFill = input.bool(true,  "Show BB/KC Squeeze Fill",       group=groupSqz)
+showSqzBG    = input.bool(true,  "Show Squeeze Background",       group=groupSqz)
+sqzBBLen     = input.int(20,     "BB Length",                     group=groupSqz, minval=5)
+sqzBBMult    = input.float(2.0,  "BB Multiplier",                group=groupSqz, minval=0.5, step=0.1)
+sqzKCLen     = input.int(20,     "KC Length",                     group=groupSqz, minval=5)
+sqzKCMult    = input.float(1.5,  "KC Multiplier",                group=groupSqz, minval=0.5, step=0.1)
+showATR      = input.bool(false, "Show ATR/Price Label",          group=groupSqz)
+
+// =========================
+// Visual Options
+// =========================
+groupVis     = "Visuals"
+showTrails   = input.bool(true,  "Show Trail Lines",           group=groupVis)
+showBarcolor = input.bool(true,  "Show Bot Candle Color",      group=groupVis)
+showTable    = input.bool(true,  "Show Dynamic Mult Table",    group=groupVis)
+
+// =========================
+// Squeeze Detection & BB/KC
+// =========================
+basisBB  = ta.sma(close, sqzBBLen)
+devBB    = sqzBBMult * ta.stdev(close, sqzBBLen)
+upperBB  = basisBB + devBB
+lowerBB  = basisBB - devBB
+
+basisKC  = ta.sma(close, sqzKCLen)
+rangeKC  = ta.sma(ta.tr, sqzKCLen)
+upperKC  = basisKC + rangeKC * sqzKCMult
+lowerKC  = basisKC - rangeKC * sqzKCMult
+
+sqzOn    = (lowerBB > lowerKC) and (upperBB < upperKC)
+sqzOff   = (lowerBB < lowerKC) and (upperBB > upperKC)
+sqzOk    = sqzEnabled ? not sqzOn : true
+
+// ATR / Price ratio
+atrVal   = ta.sma(ta.tr, sqzKCLen)
+atrRatio = (atrVal / close) * 100
+
+// =========================
+// BB & KC Channel Plots (matching BB_KC_ATR_K style)
+// =========================
+
+// BB lines — blue
+pBBu = plot(showBBKC ? upperBB : na, title="BB Upper", color=color.new(color.blue, 0), linewidth=2)
+plot(showBBKC ? basisBB : na, title="BB Basis", color=color.new(color.blue, 50), linewidth=1)
+pBBl = plot(showBBKC ? lowerBB : na, title="BB Lower", color=color.new(color.blue, 0), linewidth=2)
+
+// KC lines — orange
+pKCu = plot(showBBKC ? upperKC : na, title="KC Upper", color=color.new(color.orange, 0), linewidth=2)
+plot(showBBKC ? basisKC : na, title="KC Basis", color=color.new(color.orange, 50), linewidth=1)
+pKCl = plot(showBBKC ? lowerKC : na, title="KC Lower", color=color.new(color.orange, 0), linewidth=2)
+
+// BB fill — red during squeeze, green during release, gray neutral
+bbFillColor = sqzOn ? color.new(color.red, 80) : sqzOff ? color.new(color.green, 80) : color.new(color.gray, 90)
+fill(pBBu, pBBl, color=showBBKCFill ? bbFillColor : na, title="BB Fill")
+
+// KC fill — subtle orange always
+fill(pKCu, pKCl, color=showBBKCFill ? color.new(color.orange, 90) : na, title="KC Fill")
+
+// Background color during squeeze
+bgcolor(showSqzBG and sqzOn ? color.new(color.red, 93) : na, title="Squeeze Active BG")
+bgcolor(showSqzBG and sqzOff ? color.new(color.green, 93) : na, title="Squeeze Off BG")
+
+// ATR/Price ratio label
+if showATR and barstate.islast
+    labelText = "ATR/Price: " + str.tostring(atrRatio, "#.##") + "%"
+    labelColor = atrRatio < 0.5 ? color.red : atrRatio < 1.0 ? color.yellow : color.green
+    label.new(bar_index + 2, high, labelText, color=labelColor, textcolor=color.white, size=size.normal)
+
+// =========================
+// Dynamic Multiplier Calculation
+// =========================
+
+// --- Momentum Component ---
+donchianMid  = math.avg(ta.highest(high, sqzKCLen), ta.lowest(low, sqzKCLen))
+fairValue    = math.avg(donchianMid, ta.sma(close, sqzKCLen))
+momRaw       = ta.linreg(close - fairValue, sqzKCLen, 0)
+
+momMax       = ta.highest(math.abs(momRaw), momLookback)
+momNorm      = momMax > 0 ? math.abs(momRaw) / momMax : 0.0
+
+// --- Efficiency Ratio Component ---
+netMove      = math.abs(close - close[effLen])
+totalMove    = math.sum(math.abs(close - close[1]), effLen)
+efficiency   = totalMove > 0 ? netMove / totalMove : 0.0
+
+// --- Volatility Trend Component ---
+atrShort     = ta.atr(atrShortLen)
+atrLong      = ta.atr(atrLongLen)
+volRatio     = atrLong > 0 ? atrShort / atrLong : 1.0
+volNorm      = math.min(volRatio, 2.0) / 2.0
+
+// --- Composite Score ---
+wTotal       = w1 + w2 + w3
+nw1          = wTotal > 0 ? w1 / wTotal : 0.333
+nw2          = wTotal > 0 ? w2 / wTotal : 0.333
+nw3          = wTotal > 0 ? w3 / wTotal : 0.334
+
+composite    = (nw1 * momNorm) + (nw2 * efficiency) + (nw3 * volNorm)
+
+// --- Map to multiplier range and smooth ---
+dynMultRaw   = multMin + composite * (multMax - multMin)
+dynMultSmooth = ta.ema(dynMultRaw, dynSmooth)
+
+// --- Final multiplier selection ---
+currentMult  = dynEnabled ? dynMultSmooth : a_buy
+
+// =========================
+// UT Bot Calculations
+// =========================
+buyEnabled  = (c_buy  > 0) and (a_buy  > 0)
+sellEnabled = (c_sell > 0) and (a_sell > 0)
+
+src_buy   = close
+ema_buy   = ta.ema(src_buy, emaPeriod)
+atr_buy   = buyEnabled  ? ta.atr(c_buy)  : na
+nLoss_buy = buyEnabled  ? currentMult * atr_buy  : na
+
+var float trail_buy = na
+if buyEnabled
+    if na(trail_buy[1])
+        trail_buy := src_buy - nLoss_buy
+    else
+        if src_buy > trail_buy[1] and src_buy[1] > trail_buy[1]
+            trail_buy := math.max(trail_buy[1], src_buy - nLoss_buy)
+        else if src_buy < trail_buy[1] and src_buy[1] < trail_buy[1]
+            trail_buy := math.min(trail_buy[1], src_buy + nLoss_buy)
+        else
+            trail_buy := src_buy > trail_buy[1] ? src_buy - nLoss_buy : src_buy + nLoss_buy
+else
+    trail_buy := na
+
+src_sell   = close
+ema_sell   = ta.ema(src_sell, emaPeriod)
+atr_sell   = sellEnabled ? ta.atr(c_sell) : na
+nLoss_sell = sellEnabled ? currentMult * atr_sell : na
+
+var float trail_sell = na
+if sellEnabled
+    if na(trail_sell[1])
+        trail_sell := src_sell + nLoss_sell
+    else
+        if src_sell > trail_sell[1] and src_sell[1] > trail_sell[1]
+            trail_sell := math.max(trail_sell[1], src_sell - nLoss_sell)
+        else if src_sell < trail_sell[1] and src_sell[1] < trail_sell[1]
+            trail_sell := math.min(trail_sell[1], src_sell + nLoss_sell)
+        else
+            trail_sell := src_sell > trail_sell[1] ? src_sell - nLoss_sell : src_sell + nLoss_sell
+else
+    trail_sell := na
+
+// =========================================================
+// FLIP BOT ENGINE
+// =========================================================
+varip int botState = 0
+var   int confirmedState = 0
+
+evtOpenLong       = false
+evtOpenShort      = false
+evtCancelLong     = false
+evtCancelShort    = false
+evtFlipCloseLong  = false
+evtFlipCloseShort = false
+
+varip bool entryLockThisBar = false
+varip int  entrySideThisBar = 0
+
+varip bool barShowLong  = false
+varip bool barShowShort = false
+
+varip bool crossLongLatched  = false
+varip bool crossShortLatched = false
+
+varip int longTickCount  = 0
+varip int shortTickCount = 0
+
+if barstate.isnew
+    entryLockThisBar  := false
+    entrySideThisBar  := 0
+    barShowLong       := false
+    barShowShort      := false
+    longTickCount     := 0
+    shortTickCount    := 0
+
+// Cross detection
+ema_buy_cross    = ta.crossover(ema_buy, trail_buy)
+price_buy_cross  = ta.crossover(close, trail_buy)
+ema_sell_cross   = ta.crossunder(ema_sell, trail_sell)
+price_sell_cross = ta.crossunder(close, trail_sell)
+
+if ema_buy_cross or price_buy_cross
+    crossLongLatched  := true
+    crossShortLatched := false
+if ema_sell_cross or price_sell_cross
+    crossShortLatched := true
+    crossLongLatched  := false
+
+buy_signal_raw  = buyEnabled  and not na(trail_buy)  and (src_buy  > trail_buy)  and crossLongLatched
+sell_signal_raw = sellEnabled and not na(trail_sell) and (src_sell < trail_sell) and crossShortLatched
+
+// Tick stability
+if buy_signal_raw
+    longTickCount += 1
+else
+    longTickCount := 0
+
+if sell_signal_raw
+    shortTickCount += 1
+else
+    shortTickCount := 0
+
+tickOkLong  = barstate.isrealtime ? longTickCount  >= tickConfirm : true
+tickOkShort = barstate.isrealtime ? shortTickCount >= tickConfirm : true
+
+// Confidence
+confOkLong  = (close - nz(trail_buy[1],  close)) > nz(atr_buy  * confThreshold, 0)
+confOkShort = (nz(trail_sell[1], close) - close) > nz(atr_sell * confThreshold, 0)
+
+// Final entry conditions
+longReady  = buy_signal_raw  and tickOkLong  and confOkLong  and sqzOk
+shortReady = sell_signal_raw and tickOkShort and confOkShort and sqzOk
+
+// =========================================================
+// INTRABAR ENTRY EXECUTION
+// =========================================================
+if not entryLockThisBar
+    if longReady and botState <= 0
+        evtOpenLong      := true
+        barShowLong      := true
+        botState         := 1
+        entrySideThisBar := 1
+        entryLockThisBar := true
+        crossLongLatched := false
+
+    else if shortReady and botState >= 0
+        evtOpenShort     := true
+        barShowShort     := true
+        botState         := -1
+        entrySideThisBar := -1
+        entryLockThisBar := true
+        crossShortLatched := false
+
+// =========================================================
+// BAR-CLOSE REVALIDATION
+// =========================================================
+confirmedLongBias  = barstate.isconfirmed and buyEnabled  and not na(trail_buy)  and close > trail_buy
+confirmedShortBias = barstate.isconfirmed and sellEnabled and not na(trail_sell) and close < trail_sell
+
+if barstate.isconfirmed
+    if entrySideThisBar == 1
+        if confirmedLongBias
+            if confirmedState == -1
+                evtFlipCloseShort := true
+            confirmedState := 1
+        else
+            evtCancelLong := true
+            botState      := confirmedState
+
+    else if entrySideThisBar == -1
+        if confirmedShortBias
+            if confirmedState == 1
+                evtFlipCloseLong := true
+            confirmedState := -1
+        else
+            evtCancelShort := true
+            botState       := confirmedState
+
+    else
+        confirmedState := botState
+
+// =========================================================
+// VISUALS
+// =========================================================
+plot(showTrails and buyEnabled  ? trail_buy  : na, title="Trail Buy",  color=color.new(color.green, 30), linewidth=2)
+plot(showTrails and sellEnabled ? trail_sell : na, title="Trail Sell", color=color.new(color.red,   30), linewidth=2)
+
+botFillColor =
+     botState == 1  ? color.new(color.green, 75) :
+     botState == -1 ? color.new(color.red,   75) : na
+barcolor(showBarcolor ? botFillColor : na)
+
+plotshape(barShowLong,  title="OPEN LONG",  style=shape.triangleup,   location=location.belowbar, size=size.small, color=color.lime, text="L")
+plotshape(barShowShort, title="OPEN SHORT", style=shape.triangledown, location=location.abovebar, size=size.small, color=color.red,  text="S")
+
+plotshape(evtCancelLong,  title="CANCEL LONG",  style=shape.xcross, location=location.abovebar, size=size.tiny, color=color.orange)
+plotshape(evtCancelShort, title="CANCEL SHORT", style=shape.xcross, location=location.belowbar, size=size.tiny, color=color.aqua)
+
+plotshape(botState == 1,  title="IN LONG",  style=shape.circle, location=location.bottom, size=size.tiny, color=color.new(color.green, 50))
+plotshape(botState == -1, title="IN SHORT", style=shape.circle, location=location.top,    size=size.tiny, color=color.new(color.red,   50))
+
+// =========================================================
+// DEBUG TABLE — top right corner
+// =========================================================
+if showTable and dynEnabled and barstate.islast
+    var table dynTable = table.new(position.top_right, 2, 9, bgcolor=color.new(color.black, 30), border_width=1, border_color=color.gray)
+
+    // Header
+    table.cell(dynTable, 0, 0, "Dynamic Trail v4.0", text_color=color.white, text_size=size.small, bgcolor=color.new(color.blue, 50))
+    table.cell(dynTable, 1, 0, dynEnabled ? "ON" : "OFF", text_color=dynEnabled ? color.lime : color.red, text_size=size.small, bgcolor=color.new(color.blue, 50))
+
+    // Multiplier
+    multColor = dynMultSmooth > 1.5 ? color.lime : dynMultSmooth > 1.0 ? color.yellow : color.red
+    table.cell(dynTable, 0, 1, "Multiplier", text_color=color.gray, text_size=size.small)
+    table.cell(dynTable, 1, 1, str.tostring(dynMultSmooth, "#.##"), text_color=multColor, text_size=size.normal)
+
+    // Momentum
+    momColor = momNorm > 0.6 ? color.lime : momNorm > 0.3 ? color.yellow : color.red
+    table.cell(dynTable, 0, 2, "Momentum", text_color=color.gray, text_size=size.small)
+    table.cell(dynTable, 1, 2, str.tostring(momNorm, "#.##"), text_color=momColor, text_size=size.small)
+
+    // Efficiency
+    effColor = efficiency > 0.5 ? color.lime : efficiency > 0.25 ? color.yellow : color.red
+    table.cell(dynTable, 0, 3, "Efficiency", text_color=color.gray, text_size=size.small)
+    table.cell(dynTable, 1, 3, str.tostring(efficiency, "#.##"), text_color=effColor, text_size=size.small)
+
+    // Volatility
+    volColor = volNorm > 0.6 ? color.lime : volNorm > 0.4 ? color.yellow : color.red
+    table.cell(dynTable, 0, 4, "Volatility", text_color=color.gray, text_size=size.small)
+    table.cell(dynTable, 1, 4, str.tostring(volNorm, "#.##"), text_color=volColor, text_size=size.small)
+
+    // Composite
+    compColor = composite > 0.6 ? color.lime : composite > 0.3 ? color.yellow : color.red
+    table.cell(dynTable, 0, 5, "Composite", text_color=color.gray, text_size=size.small)
+    table.cell(dynTable, 1, 5, str.tostring(composite, "#.##"), text_color=compColor, text_size=size.small)
+
+    // Squeeze state
+    sqzText  = sqzOn ? "SQUEEZE" : sqzOff ? "RELEASED" : "NORMAL"
+    sqzColor = sqzOn ? color.red : sqzOff ? color.lime : color.gray
+    table.cell(dynTable, 0, 6, "Squeeze", text_color=color.gray, text_size=size.small)
+    table.cell(dynTable, 1, 6, sqzText, text_color=sqzColor, text_size=size.small)
+
+    // ATR/Price ratio
+    atrColor = atrRatio < 0.5 ? color.red : atrRatio < 1.0 ? color.yellow : color.lime
+    table.cell(dynTable, 0, 7, "ATR/Price", text_color=color.gray, text_size=size.small)
+    table.cell(dynTable, 1, 7, str.tostring(atrRatio, "#.##") + "%", text_color=atrColor, text_size=size.small)
+
+    // ATR value
+    table.cell(dynTable, 0, 8, "ATR", text_color=color.gray, text_size=size.small)
+    table.cell(dynTable, 1, 8, str.tostring(atrVal, "#.##"), text_color=color.white, text_size=size.small)
+// =========================================================
+// ALERTS
+// =========================================================
+if evtOpenLong
+    alert('{"side":"long","action":"open","ticker":"' + syminfo.ticker +
+          '","price":' + str.tostring(close) +
+          ',"mult":' + str.tostring(dynMultSmooth) +
+          ',"time":' + str.tostring(time) + '}',
+          alert.freq_all)
+
+if evtOpenShort
+    alert('{"side":"short","action":"open","ticker":"' + syminfo.ticker +
+          '","price":' + str.tostring(close) +
+          ',"mult":' + str.tostring(dynMultSmooth) +
+          ',"time":' + str.tostring(time) + '}',
+          alert.freq_all)
+
+if evtCancelLong or evtFlipCloseLong
+    _rsn = evtFlipCloseLong ? "flip" : "cancel"
+    alert('{"side":"long","action":"close","reason":"' + _rsn + '","ticker":"' + syminfo.ticker +
+          '","price":' + str.tostring(close) + ',"time":' + str.tostring(time) + '}',
+          alert.freq_all)
+
+if evtCancelShort or evtFlipCloseShort
+    _rsn = evtFlipCloseShort ? "flip" : "cancel"
+    alert('{"side":"short","action":"close","reason":"' + _rsn + '","ticker":"' + syminfo.ticker +
+          '","price":' + str.tostring(close) + ',"time":' + str.tostring(time) + '}',
+          alert.freq_all)

@@ -1,0 +1,44 @@
+//@version=6
+indicator(title="Volume Flow Indicator MTF", shorttitle="VFI_MTF")
+
+// Inputs
+useCurrentRes = input.bool(true, title="Use Current Chart Resolution?")
+resCustom     = input.timeframe("60", title="Timeframe (uncheck above to use)")
+length        = input.int(48, title="VFI Length")
+coef          = input.float(0.2, title="Cutoff Coefficient")
+vcoef         = input.float(2.5, title="Max Volume Cutoff")
+signalLength  = input.int(5, title="Signal Length")
+smoothVFI     = input.bool(false, title="Smooth VFI?")
+showHisto     = input.bool(true, title="Show Histogram?")
+
+// Resolution
+res = useCurrentRes ? timeframe.period : resCustom
+
+// VFI calculation as a function
+calcVFI() =>
+    typical = hlc3
+    inter   = math.log(typical) - math.log(typical[1])
+    vinter  = ta.stdev(inter, 30)
+    cutoff  = coef * vinter * close
+    vave    = ta.sma(volume, length)[1]
+    vmax    = vave * vcoef
+    vc      = volume < vmax ? volume : vmax
+    mf      = typical - typical[1]
+    vcp     = mf > cutoff ? vc : mf < -cutoff ? -vc : 0
+    rawVfi  = math.sum(vcp, length) / vave
+    smoothVFI ? ta.sma(rawVfi, 3) : rawVfi
+
+// Pull VFI from selected timeframe
+vfi     = request.security(syminfo.tickerid, res, calcVFI(), lookahead=barmerge.lookahead_off)
+vfima   = ta.ema(vfi, signalLength)
+d       = vfi - vfima
+
+// Colors
+vfiColor   = vfi > 0 ? color.new(color.green, 0) : color.new(color.red, 0)
+histColor  = d > 0 ? color.new(color.lime, 50) : color.new(color.red, 50)
+
+// Plots
+hline(0, "Zero", color=color.gray, linestyle=hline.style_dotted)
+plot(showHisto ? d : na, title="Histogram", style=plot.style_histogram, color=histColor, linewidth=3)
+plot(vfima, title="Signal", color=color.orange, linewidth=1)
+plot(vfi, title="VFI", color=vfiColor, linewidth=2)

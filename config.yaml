@@ -1,0 +1,278 @@
+# ML Trading Bot — Master Configuration
+# All paths relative to project root unless absolute.
+
+project:
+  name: ml-bot
+  root: /nvme1/projects/trading/ml-bot
+  timezone: UTC
+
+# ────────────────────────────────────────────────────────────────────────────
+# Database — PostgreSQL + TimescaleDB
+# Connection credentials live in `.env` (see .env.example). Only non-secret
+# tuning knobs go here.
+# ────────────────────────────────────────────────────────────────────────────
+database:
+  schema: public
+  # TimescaleDB chunk intervals (one chunk per period, per space partition).
+  chunk_interval_ohlcv_5m: "30 days"
+  chunk_interval_ohlcv_1h: "180 days"
+  chunk_interval_trades:   "1 day"
+  chunk_interval_funding:  "30 days"
+  chunk_interval_l2:       "1 day"
+  # Compression kicks in after data is older than this.
+  compress_after_ohlcv:    "7 days"
+  compress_after_trades:   "2 days"
+  compress_after_funding:  "30 days"
+  compress_after_l2:       "1 day"
+  # Retention — drop chunks older than this. null = keep forever.
+  retention_ohlcv:   null         # OHLCV is the source-of-truth, never drop
+  retention_trades:  "365 days"
+  retention_funding: null
+  retention_l2:      "180 days"   # raw L2 snapshots are bulky; aggregate first
+
+# ────────────────────────────────────────────────────────────────────────────
+# Train / validation split
+# ────────────────────────────────────────────────────────────────────────────
+splits:
+  train_end:  "2026-02-28"        # everything <= this date is training
+  val_start:  "2026-03-01"        # validation starts here, runs to "now"
+
+# ────────────────────────────────────────────────────────────────────────────
+# Data sources
+# ────────────────────────────────────────────────────────────────────────────
+data:
+  # Training data — Binance SPOT via data-api.binance.vision.
+  # We originally chose Futures (perp) but main api/fapi domains return HTTP 451
+  # from this VPS region. data-api.binance.vision is the official public market-
+  # data host, no geo-block, but only serves SPOT. For ML on OHLCV features the
+  # spot/perp difference is statistically negligible (>99% corr, <0.1% basis).
+  binance:
+    market_type: spot            # was 'future' — see note above
+    symbols:                     # CCXT format
+      - BTC/USDT
+      - SOL/USDT
+      - LINK/USDT
+      - TAO/USDT
+      # HYPE/USDT is NOT on Binance spot — trained only on the 4 above.
+      # HYPE still has live trade tape + funding via hyperliquid.coins below;
+      # if we want OHLCV for HYPE later, source it from Hyperliquid directly.
+    timeframes: [5m, 1h]
+    history_months: 18           # Per Decision #24 — minimum
+    request_limit: 1500          # Max candles per CCXT request (Binance allows 1500 for futures)
+    rate_limit_ms: 250           # Polite pacing between requests
+    storage_dir: data/storage/binance
+
+  # Live exchange data — Hyperliquid (the execution venue).
+  hyperliquid:
+    ws_url: wss://api.hyperliquid.xyz/ws
+    rest_url: https://api.hyperliquid.xyz
+    coins: [BTC, SOL, LINK, TAO, HYPE]
+    storage_dir: data/storage/hyperliquid
+    # L2 book sampling — every N seconds, aligned to candle aggregation.
+    l2_sample_interval_sec: 5
+    # Funding rate poll — Hyperliquid settles HOURLY (not 8h like Binance).
+    funding_poll_interval_sec: 3600
+    reconnect_delay_sec: 5
+    max_reconnect_delay_sec: 60
+
+# ────────────────────────────────────────────────────────────────────────────
+# Feature engineering
+# ────────────────────────────────────────────────────────────────────────────
+features:
+  warmup_bars: 250               # Drop first N rows of computed features (longest lookback ~ Hurst 100, KAMA 30)
+  multi_tf_shift_1h: 1           # Shift 1H by 1 bar to use PREVIOUS completed bar (avoid look-ahead)
+  output_dir: data/storage/features
+
+  # Lookback parameters per indicator family.
+  rsi:
+    period: 14
+    sma_period: 14
+    bb_period: 14
+    bb_std: 2.0
+  wavetrend:
+    n1: 10                       # channel length
+    n2: 21                       # average length
+    signal: 4                    # signal SMA
+    ob_level: 60
+    os_level: -60
+  stochastic:
+    k_period: 14
+    k_smooth: 3
+    d_smooth: 3
+  squeeze:
+    bb_length: 20
+    bb_mult: 2.0
+    kc_length: 20
+    kc_mult: 1.5
+  macd:
+    fast: 12
+    slow: 26
+    signal: 9
+  adx:
+    period: 14
+    di_roc_window: 5
+    spread_roc_window: 3
+  ema_periods: [9, 21, 50]
+  atr:
+    period: 14
+    short_period: 5              # for atr_ratio (UT Bot concept)
+    percentile_window: 100
+    roc_window: 5
+  bb:
+    period: 20
+    std: 2.0
+  vfi:
+    period: 130                  # LazyBear default
+    coef: 0.2
+    vcoef: 2.5
+    signal_period: 5
+  vwap:
+    bands_window: 20             # Std lookback for upper/lower bands
+  pivots:
+    type: fibonacci              # P, R1/R2/R3, S1/S2/S3 with fib multipliers (0.382, 0.618, 1.0)
+    test_tolerance_pct: 0.1      # Within 0.1% counts as a "touch"
+  cmf:
+    period: 20
+  mfi:
+    period: 14
+  williams_r:
+    period: 14
+  cci:
+    period: 20
+  cmo:
+    period: 14
+  roc:
+    period: 10
+  tsi:
+    long: 25
+    short: 13
+  swing:
+    fractal_lookback: 5          # 2 left + 2 right + 1 center
+  hurst:
+    window: 100
+  fractal_dim:
+    window: 50
+  parkinson:
+    window: 20
+  kama:
+    period: 10
+    fast_ema: 2
+    slow_ema: 30
+  dema:
+    period: 21
+  tema:
+    period: 21
+  psar:
+    af_start: 0.02
+    af_step: 0.02
+    af_max: 0.2
+  ichimoku:
+    tenkan: 9
+    kijun: 26
+    senkou_b: 52
+  event_memory:
+    rsi_ob: 70
+    rsi_os: 30
+    rsi_mid: 50
+    stoch_ob: 80
+    stoch_os: 20
+    adx_trend: 25
+    adx_weak: 15
+    volume_spike_mult: 3.0
+    swing_break_lookback: 20
+
+# ────────────────────────────────────────────────────────────────────────────
+# Labeling — triple-barrier (Lopez de Prado)
+# ────────────────────────────────────────────────────────────────────────────
+labeling:
+  method: triple_barrier
+  tp_atr_mult: 3.0               # Per spec table — multi-pivot moves
+  sl_atr_mult: 2.0               # Matches trader's stop placement
+  max_holding_bars: 48           # 4 hours on 5min
+  # min_profit_pct is asset-specific.
+  min_profit_pct:
+    BTC: 0.3
+    SOL: 0.6
+    LINK: 0.6
+    TAO: 1.0
+    HYPE: 1.0
+  classes:
+    LONG: 0
+    SHORT: 1
+    NEUTRAL: 2
+
+# ────────────────────────────────────────────────────────────────────────────
+# Model
+# ────────────────────────────────────────────────────────────────────────────
+model:
+  framework: lightgbm
+  params:
+    objective: multiclass
+    num_class: 3
+    metric: multi_logloss
+    boosting_type: gbdt
+    num_leaves: 63
+    learning_rate: 0.05
+    feature_fraction: 0.8
+    bagging_fraction: 0.8
+    bagging_freq: 5
+    min_child_samples: 50
+    lambda_l1: 0.1
+    lambda_l2: 0.1
+    verbose: -1
+    n_jobs: -1
+    seed: 42
+  num_boost_round: 1000
+  early_stopping_rounds: 50
+  walk_forward_purge_bars: 48    # = max_holding_bars
+  signal_threshold: 0.65         # P > 0.65 to trade
+
+# ────────────────────────────────────────────────────────────────────────────
+# Risk / execution (Phase 2+)
+# ────────────────────────────────────────────────────────────────────────────
+risk:
+  max_risk_per_trade_pct: 2.0
+  max_position_size_pct: 10.0
+  max_daily_loss_pct: 5.0
+  max_concurrent_positions: 1
+  trail_atr_mult: 2.0
+
+# Asset-specific fees (HYPE may have reduced/zero fees on Hyperliquid).
+fees:
+  default:
+    taker: 0.00035
+    maker: 0.00010
+  HYPE:
+    taker: 0.00035
+    maker: 0.0
+  slippage_pct: 0.0002
+
+# ────────────────────────────────────────────────────────────────────────────
+# Services — bot.py reads this section and spawns each enabled service as a
+# daemon thread. Disable a service by setting `enabled: false` (no need to
+# comment out — the supervisor just skips it).
+# ────────────────────────────────────────────────────────────────────────────
+services:
+  follower:                          # Live OHLCV from Binance spot → Postgres
+    enabled: true
+    interval_sec: 30                 # poll cadence
+  hl_collector:                      # Hyperliquid trades WS + funding REST
+    enabled: true
+  predictor:                         # Phase 2 — model inference loop
+    enabled: false
+  executor:                          # Phase 2 — order placement on Hyperliquid
+    enabled: false
+
+# Supervisor knobs (applied to every service thread).
+supervisor:
+  shutdown_timeout_sec: 15           # how long to wait for each thread to drain on SIGTERM
+  health_log_interval_sec: 60        # heartbeat log cadence
+
+# ────────────────────────────────────────────────────────────────────────────
+# Logging
+# ────────────────────────────────────────────────────────────────────────────
+logging:
+  level: INFO
+  dir: logs
+  rotation: 100 MB
+  retention: 30 days
