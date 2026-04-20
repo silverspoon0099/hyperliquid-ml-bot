@@ -46,7 +46,7 @@ def vfi(
     direction = np.where(mf.abs() > cutoff, np.sign(mf), 0.0)
     vcp = vc * direction
     raw = vcp.rolling(period, min_periods=period).sum() / vave
-    return raw.ewm(span=3, adjust=False, min_periods=3).mean()  # smooth like LazyBear
+    return raw.rolling(3, min_periods=3).mean()  # LazyBear Pine: sma(..., 3)
 
 
 def vfi_features_5m(

@@ -459,6 +459,7 @@ This is not a bug — it's the v4.0 design intent. However, the high signal freq
 4. **Context over snapshot**: For Pivot levels, include approach direction, speed, bounce/break, and test count — not just distance.
 5. **Log-transform volatile features**: Apply Lorentzian-inspired `log(1 + |x|)` to ATR, volume spikes, and extreme RSI moves.
 6. **Multi-timeframe features must be mapped**: 1H values are assigned to the 5min candle that falls within that 1H bar. No future data leakage.
+7. **Signed-direction convention** (project-wide): For any feature encoded as {-1, 0, +1}, **`+1` = bullish / up / long-favoring**, **`-1` = bearish / down / short-favoring**, **`0` = neutral or absent**. This applies to crosses, engulfing, pin bars, divergences (regular and hidden), structure type, PSAR direction, TK cross, session direction, etc. The model learns asymmetries more cleanly when this is consistent across all features.
 
 ### 6.2 Complete Feature List (295 Features)
 
@@ -782,10 +783,10 @@ Inspired by "Divergence for Many Indicators v4" in user's collection. Divergence
 
 | #   | Feature Name             | Calculation                                                                                                                  | Source             |
 | --- | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------- | ------------------ |
-| 175 | `rsi_price_divergence`   | +1 if price makes higher high but RSI makes lower high (bearish), -1 if price lower low but RSI higher low (bullish), 0 none | RSI + Price        |
-| 176 | `macd_price_divergence`  | +1 bearish divergence, -1 bullish divergence (MACD histogram vs price)                                                       | MACD + Price       |
-| 177 | `wt_price_divergence`    | +1 bearish, -1 bullish (WaveTrend vs price)                                                                                  | WaveTrend + Price  |
-| 178 | `stoch_price_divergence` | +1 bearish, -1 bullish (Stochastic %K vs price)                                                                              | Stochastic + Price |
+| 175 | `rsi_price_divergence`   | +1 if price lower low but RSI higher low (bullish), -1 if price higher high but RSI lower high (bearish), 0 none | RSI + Price        |
+| 176 | `macd_price_divergence`  | +1 bullish divergence, -1 bearish divergence (MACD histogram vs price)                                                       | MACD + Price       |
+| 177 | `wt_price_divergence`    | +1 bullish, -1 bearish (WaveTrend vs price)                                                                                  | WaveTrend + Price  |
+| 178 | `stoch_price_divergence` | +1 bullish, -1 bearish (Stochastic %K vs price)                                                                              | Stochastic + Price |
 | 179 | `divergence_count`       | Sum of absolute divergences active — multiple divergences = stronger signal                                                  | Derived            |
 | 180 | `hidden_divergence`      | +1 if price higher low + RSI lower low (hidden bullish), -1 hidden bearish                                                   | RSI + Price        |
 | 181 | `divergence_freshness`   | Bars since most recent divergence signal (lower = more actionable)                                                           | Derived            |

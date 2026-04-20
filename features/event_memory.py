@@ -64,6 +64,62 @@ def _last_episode_extreme(value: pd.Series, state: pd.Series, op: str) -> pd.Ser
     return pd.Series(out, index=value.index)
 
 
+def _bars_in_current_or_last_episode(state: pd.Series) -> pd.Series:
+    """Running bar count while in True state; forward-fills last completed duration when False.
+
+    Used so `*_bars_in_ob/os` always reports "most recent OB/OS episode length" per spec —
+    whether the episode is still active or just ended.
+    """
+    s = state.astype(bool).to_numpy()
+    out = np.full(len(s), np.nan)
+    run = 0
+    last_dur = np.nan
+    for i, v in enumerate(s):
+        if v:
+            run += 1
+            out[i] = run
+        else:
+            if run > 0:
+                last_dur = run
+                run = 0
+            out[i] = last_dur
+    return pd.Series(out, index=state.index)
+
+
+def _last_extreme_depth(
+    value: pd.Series,
+    in_ob: pd.Series,
+    in_os: pd.Series,
+    ob_level: float,
+    os_level: float,
+) -> pd.Series:
+    """Depth of whichever OB/OS episode happened MOST recently (not just whichever ever occurred).
+
+    During an active episode, tracks the running extreme depth. After exit, forward-fills.
+    """
+    v = value.to_numpy()
+    o = in_ob.astype(bool).to_numpy()
+    s = in_os.astype(bool).to_numpy()
+    out = np.full(len(v), np.nan)
+    cur_kind: str | None = None
+    cur_extreme = np.nan
+    last_depth = np.nan
+    for i in range(len(v)):
+        if o[i]:
+            cur_extreme = v[i] if cur_kind != "ob" else max(cur_extreme, v[i])
+            cur_kind = "ob"
+            last_depth = cur_extreme - ob_level
+        elif s[i]:
+            cur_extreme = v[i] if cur_kind != "os" else min(cur_extreme, v[i])
+            cur_kind = "os"
+            last_depth = os_level - cur_extreme
+        else:
+            cur_kind = None
+            cur_extreme = np.nan
+        out[i] = last_depth
+    return pd.Series(out, index=value.index)
+
+
 def _recovery_speed(value: pd.Series, state_extreme: pd.Series, target: float = 50.0) -> pd.Series:
     """Bars from end of most recent extreme episode until value crosses `target`."""
     arr = value.to_numpy()
@@ -100,21 +156,15 @@ def stoch_event_memory(stoch_k: pd.Series, stoch_d: pd.Series, cfg_em: dict) -> 
     in_ob = stoch_k > ob_level
     in_os = stoch_k < os_level
 
-    last_ob_max = _last_episode_extreme(stoch_k, in_ob, "max")
-    last_os_min = _last_episode_extreme(stoch_k, in_os, "min")
-    last_extreme_depth = (last_ob_max - ob_level).where(
-        last_ob_max.notna(), os_level - last_os_min
-    )
-
     return pd.DataFrame(
         {
             "stoch_bars_since_green": bars_since(green),
             "stoch_bars_since_red": bars_since(red),
             "stoch_green_count_50": green.astype(int).rolling(50, min_periods=50).sum(),
             "stoch_red_count_50": red.astype(int).rolling(50, min_periods=50).sum(),
-            "stoch_last_extreme_depth": last_extreme_depth,
-            "stoch_bars_in_ob": _bars_in_state(in_ob),
-            "stoch_bars_in_os": _bars_in_state(in_os),
+            "stoch_last_extreme_depth": _last_extreme_depth(stoch_k, in_ob, in_os, ob_level, os_level),
+            "stoch_bars_in_ob": _bars_in_current_or_last_episode(in_ob),
+            "stoch_bars_in_os": _bars_in_current_or_last_episode(in_os),
             "stoch_recovery_speed": _recovery_speed(stoch_k, in_ob | in_os, target=50.0),
         }
     )

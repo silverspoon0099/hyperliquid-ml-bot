@@ -59,15 +59,40 @@ def shannon_entropy_window(arr: np.ndarray, bins: int = 10) -> float:
 
 
 def fractal_dim_window(arr: np.ndarray) -> float:
-    """Higuchi-like fractal dimension proxy via path length / range ratio."""
+    """Box-counting fractal dimension of the price path on the unit square.
+
+    Normalize (t, price) to [0,1]^2, cover with dyadic grids of size eps = 1/2^k,
+    count occupied boxes (including vertical spans between consecutive samples).
+    D = -slope of log N(eps) vs log eps.
+    """
     if len(arr) < 10 or np.isnan(arr).any():
         return np.nan
     n = len(arr)
-    path = np.abs(np.diff(arr)).sum()
     rng = arr.max() - arr.min()
     if rng == 0:
         return np.nan
-    return float(1 + np.log(path / rng) / np.log(n))
+    x = np.arange(n, dtype=float) / (n - 1)
+    y = (arr - arr.min()) / rng
+    scales: list[float] = []
+    counts: list[int] = []
+    max_k = int(np.floor(np.log2(n)))
+    for k in range(1, max_k + 1):
+        eps = 1.0 / (2 ** k)
+        bx = np.floor(x / eps).astype(int)
+        by = np.floor(y / eps).astype(int)
+        boxes: set[tuple[int, int]] = set()
+        for i in range(n):
+            boxes.add((bx[i], by[i]))
+            if i > 0 and bx[i] != bx[i - 1]:
+                lo, hi = (by[i - 1], by[i]) if by[i - 1] <= by[i] else (by[i], by[i - 1])
+                for v in range(lo, hi + 1):
+                    boxes.add((bx[i], v))
+        scales.append(eps)
+        counts.append(len(boxes))
+    if len(scales) < 3:
+        return np.nan
+    slope = np.polyfit(np.log(scales), np.log(counts), 1)[0]
+    return float(-slope)
 
 
 def stats_features(df: pd.DataFrame, cfg: dict) -> pd.DataFrame:

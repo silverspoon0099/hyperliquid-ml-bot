@@ -58,7 +58,8 @@ def parabolic_sar(
         prev_sar = sar[i - 1]
         if trend[i - 1] == 1:
             new_sar = prev_sar + af * (ep - prev_sar)
-            new_sar = min(new_sar, l[i - 1], l[i - 2] if i >= 2 else l[i - 1])
+            # Wilder clamp: SAR cannot exceed the lows of the prior two bars.
+            new_sar = min(new_sar, l[i - 1], l[i - 2])
             if l[i] < new_sar:
                 trend[i] = -1
                 sar[i] = ep
@@ -72,7 +73,8 @@ def parabolic_sar(
                     af = min(af + af_step, af_max)
         else:
             new_sar = prev_sar + af * (ep - prev_sar)
-            new_sar = max(new_sar, h[i - 1], h[i - 2] if i >= 2 else h[i - 1])
+            # Wilder clamp: SAR cannot fall below the highs of the prior two bars.
+            new_sar = max(new_sar, h[i - 1], h[i - 2])
             if h[i] > new_sar:
                 trend[i] = 1
                 sar[i] = ep

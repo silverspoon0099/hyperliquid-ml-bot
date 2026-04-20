@@ -92,7 +92,8 @@ def pivot_features(df_5m: pd.DataFrame, day_id: pd.Series, tolerance_pct: float)
     diff_prev = diff.shift(1)
     # +1 if magnitude shrinking (approaching) and price falling toward (above level)
     approaching = (diff.abs() < diff_prev.abs())
-    direction = np.where(diff > 0, -1, 1)  # price above level -> falling toward it = +1
+    # Spec #117: +1 if price falling toward level (price above), -1 if rising toward level (price below).
+    direction = np.where(diff > 0, 1, -1)
     approach_dir = pd.Series(np.where(approaching, direction, 0), index=close.index)
     approach_speed = (close - close.shift(3)).abs() / close * 100
 

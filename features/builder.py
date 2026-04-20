@@ -153,14 +153,13 @@ def build_features(symbol: str, cfg: dict) -> pd.DataFrame:
 
     # ── Mean reversion / stats (Cat 9) ────────────────────────────────────
     log.info("Computing mean-reversion (Cat 9)")
-    mr_df = stats.mean_reversion_features(df_5m, rsi_df["rsi_14"], vol_df["bb_width_percentile"] * 0)  # placeholder
-    # bb_position is computed using BB on close; vol_df doesn't expose it directly.
-    # Recompute here for correctness.
-    bb_basis = df_5m["close"].rolling(fcfg["bb"]["period"], min_periods=fcfg["bb"]["period"]).mean()
-    bb_dev = df_5m["close"].rolling(fcfg["bb"]["period"], min_periods=fcfg["bb"]["period"]).std(ddof=0)
+    bb_period = fcfg["bb"]["period"]
+    bb_basis = df_5m["close"].rolling(bb_period, min_periods=bb_period).mean()
+    bb_dev = df_5m["close"].rolling(bb_period, min_periods=bb_period).std(ddof=0)
     bb_up = bb_basis + fcfg["bb"]["std"] * bb_dev
     bb_lo = bb_basis - fcfg["bb"]["std"] * bb_dev
-    mr_df["bb_position"] = (df_5m["close"] - bb_lo) / (bb_up - bb_lo).replace(0, np.nan)
+    bb_position = (df_5m["close"] - bb_lo) / (bb_up - bb_lo).replace(0, np.nan)
+    mr_df = stats.mean_reversion_features(df_5m, rsi_df["rsi_14"], bb_position)
     parts.append(mr_df)
 
     # ── Regime (Cat 10) ───────────────────────────────────────────────────

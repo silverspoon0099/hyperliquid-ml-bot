@@ -8,14 +8,89 @@ from ._common import bars_since, pct, safe_div
 from .divergence import fractal_pivots
 
 
+def _pivot_running_count(pivots: pd.Series, n: int, up: bool) -> pd.Series:
+    """At each bar, count of direction-matching steps within the last n pivots. Forward-filled."""
+    vals = pivots.dropna()
+    if len(vals) < 2:
+        return pd.Series(0.0, index=pivots.index)
+    arr = vals.to_numpy()
+    diffs = np.diff(arr)
+    hits = (diffs > 0 if up else diffs < 0).astype(int)
+    cs = np.concatenate([[0], np.cumsum(hits)])
+    out = np.zeros(len(arr), dtype=float)
+    for i in range(1, len(arr)):
+        lo = max(0, i - (n - 1))
+        out[i] = cs[i] - cs[lo]
+    return pd.Series(out, index=vals.index).reindex(pivots.index).ffill().fillna(0)
+
+
+def _swing_ratio(p_high: pd.Series, p_low: pd.Series) -> pd.Series:
+    """Most recent swing length / previous swing length, from alternating H/L pivots.
+
+    Walks pivots in order, enforces H/L alternation (consecutive same-kind pivots collapse
+    to the more extreme one). Each bar carries the ratio of the last two completed swings.
+    """
+    n = len(p_high)
+    ph = p_high.to_numpy()
+    pl = p_low.to_numpy()
+    out = np.full(n, np.nan)
+    chain_prices: list[float] = []
+    chain_kinds: list[str] = []
+    for i in range(n):
+        if not np.isnan(ph[i]):
+            if chain_kinds and chain_kinds[-1] == "H":
+                if ph[i] > chain_prices[-1]:
+                    chain_prices[-1] = ph[i]
+            else:
+                chain_prices.append(float(ph[i]))
+                chain_kinds.append("H")
+        if not np.isnan(pl[i]):
+            if chain_kinds and chain_kinds[-1] == "L":
+                if pl[i] < chain_prices[-1]:
+                    chain_prices[-1] = pl[i]
+            else:
+                chain_prices.append(float(pl[i]))
+                chain_kinds.append("L")
+        if len(chain_prices) >= 3:
+            cur = abs(chain_prices[-1] - chain_prices[-2])
+            prev = abs(chain_prices[-2] - chain_prices[-3])
+            if prev > 0:
+                out[i] = cur / prev
+    return pd.Series(out, index=p_high.index).ffill()
+
+
+def _structure_type_series(p_high: pd.Series, p_low: pd.Series) -> pd.Series:
+    """+1 HH+HL uptrend, -1 LL+LH downtrend, 0 otherwise. Single pass, O(N)."""
+    ph = p_high.to_numpy()
+    pl = p_low.to_numpy()
+    out = np.zeros(len(ph))
+    last_hs: list[float] = []
+    last_ls: list[float] = []
+    for i in range(len(ph)):
+        if not np.isnan(ph[i]):
+            last_hs.append(float(ph[i]))
+            if len(last_hs) > 2:
+                last_hs.pop(0)
+        if not np.isnan(pl[i]):
+            last_ls.append(float(pl[i]))
+            if len(last_ls) > 2:
+                last_ls.pop(0)
+        if len(last_hs) == 2 and len(last_ls) == 2:
+            hh = last_hs[-1] > last_hs[-2]
+            hl = last_ls[-1] > last_ls[-2]
+            ll = last_ls[-1] < last_ls[-2]
+            lh = last_hs[-1] < last_hs[-2]
+            if hh and hl:
+                out[i] = 1
+            elif ll and lh:
+                out[i] = -1
+    return pd.Series(out, index=p_high.index)
+
+
 def structure_features(df: pd.DataFrame, lookback: int = 5) -> pd.DataFrame:
     high, low, close = df["high"], df["low"], df["close"]
 
-    p_high, p_low = fractal_pivots(high, lookback)
-    _, p_low_low = fractal_pivots(low, lookback)
-    p_low = p_low_low  # fractal_pivots(high) returned high-pivot of high; we need low pivots of low.
-
-    # Recompute correctly — pivot highs from `high`, pivot lows from `low`.
+    # Pivot highs from `high`, pivot lows from `low`.
     p_high, _ = fractal_pivots(high, lookback)
     _, p_low = fractal_pivots(low, lookback)
 
@@ -26,62 +101,17 @@ def structure_features(df: pd.DataFrame, lookback: int = 5) -> pd.DataFrame:
     swing_high_dist = pct(close - last_high, close)
     swing_low_dist = pct(close - last_low, close)
 
-    # Structure type: HH+HL = uptrend (+1), LH+LL = downtrend (-1), else 0.
-    high_pivots_only = p_high.dropna()
-    low_pivots_only = p_low.dropna()
+    structure_type = _structure_type_series(p_high, p_low)
 
-    def label_structure(idx_pos: int) -> int:
-        # Look back through high pivots (last 2) and low pivots (last 2) up to bar idx_pos.
-        hp = high_pivots_only[high_pivots_only.index <= close.index[idx_pos]].tail(2)
-        lp = low_pivots_only[low_pivots_only.index <= close.index[idx_pos]].tail(2)
-        if len(hp) < 2 or len(lp) < 2:
-            return 0
-        hh = hp.iloc[-1] > hp.iloc[-2]
-        hl = lp.iloc[-1] > lp.iloc[-2]
-        ll = lp.iloc[-1] < lp.iloc[-2]
-        lh = hp.iloc[-1] < hp.iloc[-2]
-        if hh and hl:
-            return 1
-        if ll and lh:
-            return -1
-        return 0
-
-    structure_type = pd.Series([label_structure(i) for i in range(len(close))], index=close.index)
-
-    # Bars since structure break = bars since structure_type changes.
     structure_changed = (structure_type != structure_type.shift(1)) & (structure_type != 0)
     bars_since_break = bars_since(structure_changed)
 
     swing_range_pct = pct(last_high - last_low, close)
 
-    # Higher-highs count in last 20 high pivots.
-    def hh_count(p: pd.Series, n: int = 20, direction: str = "up") -> pd.Series:
-        out = []
-        vals = p.dropna()
-        positions = vals.index
-        all_idx = p.index
-        # Map each row to "count of pivots in last N where each is greater than its predecessor".
-        rolling_count = []
-        for idx in all_idx:
-            window = vals[vals.index <= idx].tail(n)
-            if len(window) < 2:
-                rolling_count.append(0)
-            elif direction == "up":
-                rolling_count.append(int((window.diff().dropna() > 0).sum()))
-            else:
-                rolling_count.append(int((window.diff().dropna() < 0).sum()))
-        return pd.Series(rolling_count, index=all_idx)
+    higher_highs = _pivot_running_count(p_high, n=20, up=True)
+    lower_lows = _pivot_running_count(p_low, n=20, up=False)
 
-    higher_highs = hh_count(p_high, n=20, direction="up")
-    lower_lows = hh_count(p_low, n=20, direction="down")
-
-    # Swing ratio — most recent swing length / previous swing length (high-low alternation).
-    pivots_combined = pd.concat(
-        [p_high.rename("ph"), p_low.rename("pl")], axis=1
-    )
-    # Use absolute change between last_high and last_low.
-    swing_size = (last_high - last_low).abs()
-    swing_ratio = safe_div(swing_size, swing_size.shift(20))
+    swing_ratio = _swing_ratio(p_high, p_low)
 
     retrace_depth = safe_div(last_high - close, last_high - last_low)
     range_position = safe_div(

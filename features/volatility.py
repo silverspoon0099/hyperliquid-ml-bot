@@ -24,8 +24,9 @@ def bbands(close: pd.Series, period: int, std: float) -> tuple[pd.Series, pd.Ser
 def keltner(
     high: pd.Series, low: pd.Series, close: pd.Series, length: int, mult: float
 ) -> tuple[pd.Series, pd.Series, pd.Series]:
+    # LazyBear Squeeze default: useTrueRange=true — matches reference Pine implementation.
     basis = close.rolling(length, min_periods=length).mean()
-    rng = (high - low).rolling(length, min_periods=length).mean()
+    rng = true_range(high, low, close).rolling(length, min_periods=length).mean()
     return basis, basis + mult * rng, basis - mult * rng
 
 
