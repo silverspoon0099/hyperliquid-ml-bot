@@ -22,7 +22,11 @@
       "Bash(.venv/bin/python -m model.explainer --symbol BTC --tag tuned --sample-per-fold 2000)",
       "Bash(tee logs/shap_btc_tuned.log)",
       "Bash(tee logs/shap_btc_tuned_fix.log)",
-      "Bash(.venv/bin/python -m model.trainer --symbol BTC --best-params model/models/BTC_wf/best_params.json --feature-list model/models/BTC_wf/selected_features.json --tag tuned_trim120)"
+      "Bash(.venv/bin/python -m model.trainer --symbol BTC --best-params model/models/BTC_wf/best_params.json --feature-list model/models/BTC_wf/selected_features.json --tag tuned_trim120)",
+      "Bash(python -m scripts.threshold_sweep --symbol BTC --tag tuned_trim120)",
+      "Bash(python -m model.calibration --symbol BTC --tag tuned_trim120)",
+      "Bash(python -m scripts.threshold_sweep --symbol BTC --tag tuned_trim120 --calibrators model/models/BTC_wf_tuned_trim120/calibrators.pkl)",
+      "Bash(python -m scripts.oot_eval --symbol BTC --tag tuned_trim120 --thresholds 0.55 0.60 0.65 0.70)"
     ]
   }
 }
