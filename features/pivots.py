@@ -48,6 +48,12 @@ def pivot_features(df_5m: pd.DataFrame, day_id: pd.Series, tolerance_pct: float)
 
     Daily pivots are computed from prior-day OHLC then mapped to today's bars.
     """
+    # Normalize day_id to tz-naive. The builder passes a tz-aware (UTC) series,
+    # but pandas strips tz from `.values`, breaking the `.loc[day_id.values]`
+    # lookup against the groupby-derived tz-aware index.
+    if getattr(day_id.dtype, "tz", None) is not None:
+        day_id = day_id.dt.tz_localize(None)
+
     # Build per-day OHLC from 5min frame.
     daily = df_5m.groupby(day_id).agg(
         open=("open", "first"), high=("high", "max"), low=("low", "min"), close=("close", "last")

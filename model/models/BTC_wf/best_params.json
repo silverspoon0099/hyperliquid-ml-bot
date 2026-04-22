@@ -1,0 +1,32 @@
+{
+  "symbol": "BTC",
+  "n_trials_requested": 50,
+  "n_completed": 15,
+  "n_pruned": 0,
+  "best_trial_number": 11,
+  "best_mean_val_logloss": 0.9810485063184249,
+  "best_params": {
+    "num_leaves": 32,
+    "learning_rate": 0.027489720152045507,
+    "feature_fraction": 0.5025564826111228,
+    "bagging_fraction": 0.6684237691066285,
+    "min_child_samples": 73,
+    "lambda_l1": 0.018430907753408443,
+    "lambda_l2": 0.025886097164644916
+  },
+  "tuning_fold_indices": [
+    1,
+    4,
+    7
+  ],
+  "base_params_frozen": {
+    "objective": "multiclass",
+    "num_class": 3,
+    "metric": "multi_logloss",
+    "boosting_type": "gbdt",
+    "bagging_freq": 5,
+    "verbose": -1,
+    "n_jobs": -1,
+    "seed": 42
+  }
+}

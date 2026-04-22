@@ -186,14 +186,20 @@ features:
 # ────────────────────────────────────────────────────────────────────────────
 labeling:
   method: triple_barrier
-  tp_atr_mult: 3.0               # Per spec table — multi-pivot moves
-  sl_atr_mult: 2.0               # Matches trader's stop placement
+  # tp_atr_mult/sl_atr_mult widened from spec defaults (3/2) to 4/3 so fewer
+  # trades trip a barrier inside 48 bars — more fall to the time barrier,
+  # where min_profit_pct decides LONG/SHORT/NEUTRAL. Restores healthy
+  # NEUTRAL mass (~35–45%) instead of the 4% we got at 3/2.
+  tp_atr_mult: 4.0
+  sl_atr_mult: 3.0
   max_holding_bars: 48           # 4 hours on 5min
-  # min_profit_pct is asset-specific.
+  # min_profit_pct: timeout gate only (NOT a TP level). At 48 bars with no
+  # barrier hit, |drift| must exceed this to be LONG/SHORT, else NEUTRAL.
+  # Raised from spec defaults so typical 4h noise drift does not label as a trade.
   min_profit_pct:
-    BTC: 0.3
-    SOL: 0.6
-    LINK: 0.6
+    BTC: 0.5
+    SOL: 0.8
+    LINK: 0.7
     TAO: 1.0
     HYPE: 1.0
   classes:
@@ -226,6 +232,40 @@ model:
   early_stopping_rounds: 50
   walk_forward_purge_bars: 48    # = max_holding_bars
   signal_threshold: 0.65         # P > 0.65 to trade
+
+# ────────────────────────────────────────────────────────────────────────────
+# Walk-forward (spec §10.1) — rolling fixed-width. Each fold trains on
+# `train_months` of data, skips `model.walk_forward_purge_bars`, then validates
+# on `val_months`. Window slides by `step_months`. Rolling (not anchored) so
+# each fold mirrors the production retraining cadence (Phase 4 step 4.9).
+# ────────────────────────────────────────────────────────────────────────────
+walk_forward:
+  train_months: 9
+  val_months: 1
+  step_months: 1
+  use_class_weights: false       # relabel brought NEUTRAL from 4% -> 17%, weights no longer needed
+
+# ────────────────────────────────────────────────────────────────────────────
+# Optuna hyperparameter tuning (spec §10.2).
+# Objective = mean val log-loss across tuning_fold_indices (1-based into the
+# walk-forward fold list). Early-prune bad trials with MedianPruner.
+# ────────────────────────────────────────────────────────────────────────────
+tuning:
+  n_trials: 50
+  timeout_sec: 14400             # 4h hard cap on the whole study
+  tuning_fold_indices: [1, 4, 7] # evenly-spaced across 8 WF folds (early/mid/late regime)
+  pruner_n_warmup_steps: 1       # never prune the first fold, prune from fold 2 onward
+  seed: 42
+  direction: minimize            # we minimize multi_logloss
+  # Search space ranges (match spec §10.2 Optuna example).
+  search_space:
+    num_leaves:           [31, 127]           # int
+    learning_rate:        [0.01, 0.1]         # float, log-scale
+    feature_fraction:     [0.5, 1.0]          # float
+    bagging_fraction:     [0.5, 1.0]          # float
+    min_child_samples:    [20, 100]           # int
+    lambda_l1:            [0.001, 10.0]       # float, log-scale
+    lambda_l2:            [0.001, 10.0]       # float, log-scale
 
 # ────────────────────────────────────────────────────────────────────────────
 # Risk / execution (Phase 2+)

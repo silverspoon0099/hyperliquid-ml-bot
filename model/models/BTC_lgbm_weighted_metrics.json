@@ -1,0 +1,33 @@
+{
+  "symbol": "BTC",
+  "use_weights": true,
+  "train_rows": 112370,
+  "val_rows": 28045,
+  "n_features": 268,
+  "best_iteration": 52,
+  "log_loss": 1.0287397008294303,
+  "accuracy": 0.41151720449277945,
+  "confusion_matrix": [
+    [
+      4789,
+      2944,
+      2054
+    ],
+    [
+      6577,
+      4443,
+      2349
+    ],
+    [
+      1634,
+      946,
+      2309
+    ]
+  ],
+  "threshold": 0.65,
+  "fire_rate": 0.003530041005526832,
+  "directional_fire_rate": 0.0011766803351756106,
+  "directional_hit_rate": 0.36363636363636365,
+  "confidence_mean": 0.45524200978799684,
+  "confidence_std": 0.06314176809393085
+}

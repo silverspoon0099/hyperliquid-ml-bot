@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(.venv/bin/python -m features.builder --symbol BTC/USDT)",
+      "Bash(/nvme1/projects/trading/ml-bot/.venv/bin/python -c ' *)",
+      "Bash(/nvme1/projects/trading/ml-bot/.venv/bin/python -c \"import lightgbm, sklearn; print\\(lightgbm.__version__, sklearn.__version__\\)\")",
+      "Bash(.venv/bin/python -m scripts.train --symbol BTC)",
+      "Bash(.venv/bin/python -m scripts.train --symbol BTC --no-weights)",
+      "Bash(.venv/bin/python -m scripts.relabel --symbol BTC)",
+      "Bash(.venv/bin/python -c ' *)",
+      "Bash(.venv/bin/python -m scripts.export_parquet)",
+      "Bash(time .venv/bin/python -m model.trainer --symbol BTC)",
+      "Bash(time .venv/bin/python -m scripts.permutation_test)",
+      "Bash(.venv/bin/python -c \"import optuna; print\\('optuna', optuna.__version__\\)\")",
+      "Bash(.venv/bin/python -m model.tuner --symbol BTC --n-trials 2 --timeout 900)",
+      "Bash(.venv/bin/python -m model.tuner --symbol BTC)",
+      "Bash(tee logs/optuna_btc.log)",
+      "Bash(.venv/bin/python -m model.trainer --symbol BTC --best-params model/models/BTC_wf/best_params.json --tag tuned)",
+      "Bash(tee logs/wf_tuned_btc.log)",
+      "Bash(ps -eo pid,ppid,etime,pcpu,pmem,cmd --sort=-pcpu)",
+      "Bash(.venv/bin/pip show *)",
+      "Bash(.venv/bin/python -m model.explainer --symbol BTC --tag tuned --sample-per-fold 2000)",
+      "Bash(tee logs/shap_btc_tuned.log)",
+      "Bash(tee logs/shap_btc_tuned_fix.log)",
+      "Bash(.venv/bin/python -m model.trainer --symbol BTC --best-params model/models/BTC_wf/best_params.json --feature-list model/models/BTC_wf/selected_features.json --tag tuned_trim120)"
+    ]
+  }
+}
