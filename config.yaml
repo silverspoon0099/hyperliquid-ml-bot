@@ -112,7 +112,9 @@ features:
     period: 14
     di_roc_window: 5
     spread_roc_window: 3
-  ema_periods: [9, 21, 50]
+  ema_periods: [9, 21, 50]        # 5m
+  ema_periods_1h: [9, 21, 50, 100, 200]
+  ema_periods_1d: [20, 50, 200]
   atr:
     period: 14
     short_period: 5              # for atr_ratio (UT Bot concept)
@@ -186,22 +188,23 @@ features:
 # ────────────────────────────────────────────────────────────────────────────
 labeling:
   method: triple_barrier
-  # tp_atr_mult/sl_atr_mult widened from spec defaults (3/2) to 4/3 so fewer
-  # trades trip a barrier inside 48 bars — more fall to the time barrier,
-  # where min_profit_pct decides LONG/SHORT/NEUTRAL. Restores healthy
-  # NEUTRAL mass (~35–45%) instead of the 4% we got at 3/2.
+  # Symmetric 4/4: previous 4/3 produced 35/48/17 LONG/SHORT/NEUTRAL skew
+  # because the tighter SL (3 ATR) favored SHORT-side hits, baking a regime
+  # bias into the labels. Symmetric barriers equalize LONG/SHORT hit difficulty
+  # so the model learns direction rather than riding label asymmetry.
+  # Note: scalp geometry (3.5/2.0, 18 bars) was tested and produced no edge —
+  # label asymmetry collapsed high-threshold hit rate to the random-walk floor.
   tp_atr_mult: 4.0
-  sl_atr_mult: 3.0
-  max_holding_bars: 48           # 4 hours on 5min
-  # min_profit_pct: timeout gate only (NOT a TP level). At 48 bars with no
-  # barrier hit, |drift| must exceed this to be LONG/SHORT, else NEUTRAL.
-  # Raised from spec defaults so typical 4h noise drift does not label as a trade.
+  sl_atr_mult: 4.0
+  max_holding_bars: 24           # 2 hours on 5min (was 48 = 4h) — sharper label Q
+  # min_profit_pct: timeout gate only (NOT a TP level). At max_holding_bars with
+  # no barrier hit, |drift| must exceed this to be LONG/SHORT, else NEUTRAL.
   min_profit_pct:
-    BTC: 0.5
-    SOL: 0.8
-    LINK: 0.7
-    TAO: 1.0
-    HYPE: 1.0
+    BTC: 0.3
+    SOL: 0.5
+    LINK: 0.5
+    TAO: 0.7
+    HYPE: 0.7
   classes:
     LONG: 0
     SHORT: 1

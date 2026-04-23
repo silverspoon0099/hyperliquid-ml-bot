@@ -90,8 +90,11 @@ def run(symbol: str, cfg: dict, tag: str, thresholds: list[float],
         oot_start: str = "2026-03-29") -> dict:
     suffix = f"_{tag}" if tag else ""
     model_dir = PROJECT_ROOT / "model" / "models" / f"{symbol}_wf{suffix}"
-    sel_path = PROJECT_ROOT / "model" / "models" / f"{symbol}_wf" / "selected_features.json"
+    local_sel = model_dir / "selected_features.json"
+    base_sel = PROJECT_ROOT / "model" / "models" / f"{symbol}_wf" / "selected_features.json"
+    sel_path = local_sel if local_sel.exists() else base_sel
     selected = json.loads(sel_path.read_text())["features"]
+    log.info(f"using {len(selected)} features from {sel_path}")
 
     features_dir = PROJECT_ROOT / cfg["features"]["output_dir"]
     df = pd.read_parquet(features_dir / f"{symbol}_features.parquet")
@@ -122,7 +125,15 @@ def run(symbol: str, cfg: dict, tag: str, thresholds: list[float],
     )
     log.info(f"OOT prior-entropy floor: {prior_ent:.4f}")
 
-    booster = lgb.Booster(model_file=str(model_dir / "fold_8.txt"))
+    fold_files = sorted(
+        model_dir.glob("fold_*.txt"),
+        key=lambda p: int(p.stem.split("_")[1]),
+    )
+    if not fold_files:
+        raise RuntimeError(f"no fold_*.txt found in {model_dir}")
+    last_fold = fold_files[-1]
+    log.info(f"loading latest fold booster: {last_fold.name}")
+    booster = lgb.Booster(model_file=str(last_fold))
     raw = booster.predict(X)
 
     cal = None

@@ -1,0 +1,139 @@
+{
+  "symbol": "BTC",
+  "tag": "sym_v2_trim",
+  "oot_start": "2026-01-01",
+  "oot_end": "2026-04-21 07:45:00+00:00",
+  "n_samples": 31774,
+  "label_distribution": {
+    "LONG": 0.3752753823881161,
+    "SHORT": 0.3924592434065588,
+    "NEUTRAL": 0.23226537420532511
+  },
+  "prior_entropy": 1.0739599288332435,
+  "raw_log_loss": 1.0620035546953415,
+  "calibrated_log_loss": 1.0504719847557964,
+  "thresholds_raw": [
+    {
+      "threshold": 0.5,
+      "fire_count": 14439,
+      "fire_rate": 0.45442814880090643,
+      "dir_fire_count": 14436,
+      "dir_fire_rate": 0.45433373198212373,
+      "dir_hit_rate": 0.3983790523690773,
+      "long_fire_count": 13202,
+      "long_hit_rate": 0.3900924102408726,
+      "short_fire_count": 1234,
+      "short_hit_rate": 0.48703403565640196
+    },
+    {
+      "threshold": 0.55,
+      "fire_count": 7313,
+      "fire_rate": 0.2301567319191792,
+      "dir_fire_count": 7313,
+      "dir_fire_rate": 0.2301567319191792,
+      "dir_hit_rate": 0.381922603582661,
+      "long_fire_count": 6953,
+      "long_hit_rate": 0.37911692794477203,
+      "short_fire_count": 360,
+      "short_hit_rate": 0.4361111111111111
+    },
+    {
+      "threshold": 0.6,
+      "fire_count": 2323,
+      "fire_rate": 0.07311009001070057,
+      "dir_fire_count": 2323,
+      "dir_fire_rate": 0.07311009001070057,
+      "dir_hit_rate": 0.41713301764959104,
+      "long_fire_count": 2228,
+      "long_hit_rate": 0.42100538599640935,
+      "short_fire_count": 95,
+      "short_hit_rate": 0.3263157894736842
+    },
+    {
+      "threshold": 0.65,
+      "fire_count": 389,
+      "fire_rate": 0.012242714168817273,
+      "dir_fire_count": 389,
+      "dir_fire_rate": 0.012242714168817273,
+      "dir_hit_rate": 0.4524421593830334,
+      "long_fire_count": 373,
+      "long_hit_rate": 0.4691689008042895,
+      "short_fire_count": 16,
+      "short_hit_rate": 0.0625
+    },
+    {
+      "threshold": 0.7,
+      "fire_count": 12,
+      "fire_rate": 0.00037766727513060996,
+      "dir_fire_count": 12,
+      "dir_fire_rate": 0.00037766727513060996,
+      "dir_hit_rate": 0.5,
+      "long_fire_count": 12,
+      "long_hit_rate": 0.5,
+      "short_fire_count": 0,
+      "short_hit_rate": null
+    }
+  ],
+  "thresholds_calibrated": [
+    {
+      "threshold": 0.5,
+      "fire_count": 8933,
+      "fire_rate": 0.28114181406181155,
+      "dir_fire_count": 8816,
+      "dir_fire_rate": 0.2774595581292881,
+      "dir_hit_rate": 0.3812386569872958,
+      "long_fire_count": 8214,
+      "long_hit_rate": 0.3764304845385926,
+      "short_fire_count": 602,
+      "short_hit_rate": 0.446843853820598
+    },
+    {
+      "threshold": 0.55,
+      "fire_count": 4439,
+      "fire_rate": 0.1397054195253981,
+      "dir_fire_count": 4420,
+      "dir_fire_rate": 0.13910744633977465,
+      "dir_hit_rate": 0.3997737556561086,
+      "long_fire_count": 4268,
+      "long_hit_rate": 0.4001874414245548,
+      "short_fire_count": 152,
+      "short_hit_rate": 0.3881578947368421
+    },
+    {
+      "threshold": 0.6,
+      "fire_count": 2754,
+      "fire_rate": 0.08667463964247497,
+      "dir_fire_count": 2754,
+      "dir_fire_rate": 0.08667463964247497,
+      "dir_hit_rate": 0.420479302832244,
+      "long_fire_count": 2716,
+      "long_hit_rate": 0.41863033873343153,
+      "short_fire_count": 38,
+      "short_hit_rate": 0.5526315789473685
+    },
+    {
+      "threshold": 0.65,
+      "fire_count": 1072,
+      "fire_rate": 0.03373827657833449,
+      "dir_fire_count": 1072,
+      "dir_fire_rate": 0.03373827657833449,
+      "dir_hit_rate": 0.439365671641791,
+      "long_fire_count": 1072,
+      "long_hit_rate": 0.439365671641791,
+      "short_fire_count": 0,
+      "short_hit_rate": null
+    },
+    {
+      "threshold": 0.7,
+      "fire_count": 530,
+      "fire_rate": 0.01668030465160194,
+      "dir_fire_count": 530,
+      "dir_fire_rate": 0.01668030465160194,
+      "dir_hit_rate": 0.46226415094339623,
+      "long_fire_count": 530,
+      "long_hit_rate": 0.46226415094339623,
+      "short_fire_count": 0,
+      "short_hit_rate": null
+    }
+  ]
+}

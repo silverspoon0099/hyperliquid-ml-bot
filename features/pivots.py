@@ -43,6 +43,102 @@ def daily_pivots(df_daily: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
+def weekly_pivots(df_weekly: pd.DataFrame) -> pd.DataFrame:
+    """Fibonacci pivots from each completed week, applied to the *next* week.
+
+    Week boundary is Monday 00:00 UTC. Prior-week H/L/C → current-week levels
+    (via shift-1 after weekly resample).
+    """
+    prev = df_weekly.shift(1)
+    rng = prev["high"] - prev["low"]
+    p = (prev["high"] + prev["low"] + prev["close"]) / 3.0
+    return pd.DataFrame(
+        {
+            "weekly_pivot_S3": p - 1.000 * rng,
+            "weekly_pivot_S2": p - 0.618 * rng,
+            "weekly_pivot_S1": p - 0.382 * rng,
+            "weekly_pivot_P": p,
+            "weekly_pivot_R1": p + 0.382 * rng,
+            "weekly_pivot_R2": p + 0.618 * rng,
+            "weekly_pivot_R3": p + 1.000 * rng,
+        },
+        index=df_weekly.index,
+    )
+
+
+def weekly_pivot_features(df_5m: pd.DataFrame, week_id: pd.Series, tolerance_pct: float) -> pd.DataFrame:
+    """Weekly-reset Fibonacci pivots (Monday 00:00 UTC boundary), applied on 5m frame.
+
+    Mirrors pivot_features() but at weekly resolution. Levels are stable across the
+    week; distance/zone/approach features still reflect per-bar 5m price action.
+    """
+    if getattr(week_id.dtype, "tz", None) is not None:
+        week_id = week_id.dt.tz_localize(None)
+
+    weekly = df_5m.groupby(week_id).agg(
+        open=("open", "first"), high=("high", "max"), low=("low", "min"), close=("close", "last")
+    )
+    pivots_weekly = weekly_pivots(weekly)
+    mapped = pivots_weekly.loc[week_id.values].set_index(df_5m.index)
+
+    close = df_5m["close"]
+    cols = [f"weekly_pivot_{n}" for n in PIVOT_NAMES]
+    levels = mapped[cols]
+
+    abs_dist = (levels.sub(close, axis=0)).abs()
+    nearest_idx = abs_dist.values.argmin(axis=1)
+    nearest_dist = np.take_along_axis(abs_dist.values, nearest_idx[:, None], axis=1).ravel()
+    dist_pct = (nearest_dist / close.replace(0, np.nan)) * 100.0
+
+    arr = levels.values
+    zone = np.full(len(close), -1, dtype=float)
+    closes = close.values
+    for i in range(len(close)):
+        row = arr[i]
+        if np.isnan(row).any():
+            continue
+        if closes[i] <= row[0]:
+            zone[i] = 0
+        elif closes[i] >= row[-1]:
+            zone[i] = 5
+        else:
+            for z in range(6):
+                if row[z] <= closes[i] < row[z + 1]:
+                    zone[i] = z
+                    break
+
+    nearest_level = np.take_along_axis(arr, nearest_idx[:, None], axis=1).ravel()
+    nearest_level_s = pd.Series(nearest_level, index=close.index)
+    diff = close - nearest_level_s
+    diff_prev = diff.shift(1)
+    approaching = diff.abs() < diff_prev.abs()
+    direction = np.where(diff > 0, 1, -1)
+    approach_dir = pd.Series(np.where(approaching, direction, 0), index=close.index)
+    approach_speed = (close - close.shift(3)).abs() / close * 100
+
+    tol = tolerance_pct / 100.0
+    touched = ((close - nearest_level_s).abs() <= nearest_level_s * tol).astype(int)
+    times_tested = touched.groupby(week_id).cumsum()
+
+    return pd.concat(
+        [
+            mapped.reset_index(drop=True).set_index(df_5m.index),
+            pd.DataFrame(
+                {
+                    "dist_to_nearest_weekly_pivot_pct": dist_pct,
+                    "nearest_weekly_pivot_type": nearest_idx,
+                    "weekly_pivot_zone": zone,
+                    "weekly_pivot_approach_dir": approach_dir,
+                    "weekly_pivot_approach_speed": approach_speed,
+                    "weekly_pivot_times_tested_this_week": times_tested,
+                },
+                index=close.index,
+            ),
+        ],
+        axis=1,
+    )
+
+
 def pivot_features(df_5m: pd.DataFrame, day_id: pd.Series, tolerance_pct: float) -> pd.DataFrame:
     """Compute all pivot features on the 5min frame.
 

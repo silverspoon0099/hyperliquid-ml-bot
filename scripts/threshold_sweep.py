@@ -32,7 +32,7 @@ from utils.logging_setup import get_logger
 log = get_logger("threshold_sweep")
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
-THRESHOLDS = [0.50, 0.55, 0.60, 0.65, 0.70, 0.75]
+THRESHOLDS = [0.40, 0.45, 0.50, 0.55, 0.60, 0.65, 0.70, 0.75]
 
 
 def apply_calibrators(proba: np.ndarray, calibrators: list) -> np.ndarray:
@@ -91,7 +91,9 @@ def run(symbol: str, cfg: dict, tag: str,
     if not model_dir.exists():
         raise FileNotFoundError(f"missing {model_dir}")
 
-    sel_path = PROJECT_ROOT / "model" / "models" / f"{symbol}_wf" / "selected_features.json"
+    local_sel = model_dir / "selected_features.json"
+    base_sel = PROJECT_ROOT / "model" / "models" / f"{symbol}_wf" / "selected_features.json"
+    sel_path = local_sel if local_sel.exists() else base_sel
     selected = None
     if sel_path.exists():
         selected = json.loads(sel_path.read_text())["features"]

@@ -1,0 +1,13 @@
+{
+  "symbol": "BTC",
+  "tag": "ema_ext_trim",
+  "threshold": 0.7,
+  "rr": "pct_0p5_0p25",
+  "probabilities": "calibrated",
+  "oot_start": "2026-03-29 00:00:00+00:00",
+  "oot_end": "2026-04-21 07:45:00+00:00",
+  "n_bars": 6718,
+  "n_trades": 0,
+  "friction_bps": 11.0,
+  "max_holding_bars": 48
+}

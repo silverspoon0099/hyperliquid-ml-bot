@@ -1,0 +1,17 @@
+{
+  "symbol": "BTC",
+  "tag": "ema_ext_trim",
+  "n_oof_rows": 69984,
+  "raw_log_loss": 1.0431948392854216,
+  "calibrated_log_loss": 1.0314489606772856,
+  "raw_brier": {
+    "LONG": 0.23134020004092118,
+    "SHORT": 0.2370250819501791,
+    "NEUTRAL": 0.16883897670432393
+  },
+  "calibrated_brier": {
+    "LONG": 0.22773294721588414,
+    "SHORT": 0.23442321326759563,
+    "NEUTRAL": 0.16752696355946997
+  }
+}

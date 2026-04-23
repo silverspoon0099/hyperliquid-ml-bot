@@ -40,7 +40,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
 def run(symbol: str, cfg: dict, sample_per_fold: int = 2000,
-        tag: str = "tuned", seed: int = 42) -> pd.DataFrame:
+        tag: str = "tuned", seed: int = 42,
+        feature_list_path: Path | None = None) -> pd.DataFrame:
     suffix = f"_{tag}" if tag else ""
     model_dir = PROJECT_ROOT / "model" / "models" / f"{symbol}_wf{suffix}"
     if not model_dir.exists():
@@ -55,6 +56,14 @@ def run(symbol: str, cfg: dict, sample_per_fold: int = 2000,
     df = df[df["label"] >= 0].reset_index(drop=True)
     df["_ts"] = pd.to_datetime(df["timestamp"], unit="ms", utc=True)
     feat_cols = feature_columns(df)
+    if feature_list_path is not None:
+        with open(feature_list_path) as f:
+            sel = json.load(f)["features"]
+        missing = [c for c in sel if c not in feat_cols]
+        if missing:
+            raise ValueError(f"feature-list references {len(missing)} columns absent from parquet: {missing[:5]}...")
+        feat_cols = sel
+        log.info(f"restricted to {len(feat_cols)} features from {feature_list_path}")
     log.info(f"{len(df):,} rows, {len(feat_cols)} features")
 
     wf = cfg["walk_forward"]
@@ -158,10 +167,14 @@ def main() -> None:
                     help="model subdir suffix (empty = baseline)")
     ap.add_argument("--sample-per-fold", type=int, default=2000)
     ap.add_argument("--seed", type=int, default=42)
+    ap.add_argument("--feature-list", default=None,
+                    help="path to selected_features.json if boosters were trained on a subset")
     args = ap.parse_args()
     cfg = load_config()
+    feature_list_path = Path(args.feature_list) if args.feature_list else None
     run(args.symbol, cfg,
-        sample_per_fold=args.sample_per_fold, tag=args.tag, seed=args.seed)
+        sample_per_fold=args.sample_per_fold, tag=args.tag, seed=args.seed,
+        feature_list_path=feature_list_path)
 
 
 if __name__ == "__main__":

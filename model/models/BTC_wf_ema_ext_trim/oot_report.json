@@ -1,0 +1,139 @@
+{
+  "symbol": "BTC",
+  "tag": "ema_ext_trim",
+  "oot_start": "2026-03-29",
+  "oot_end": "2026-04-21 07:45:00+00:00",
+  "n_samples": 6718,
+  "label_distribution": {
+    "LONG": 0.3980351295028282,
+    "SHORT": 0.3411729681452813,
+    "NEUTRAL": 0.2607919023518904
+  },
+  "prior_entropy": 1.0840744340533865,
+  "raw_log_loss": 1.064259587657732,
+  "calibrated_log_loss": 1.0603227147272771,
+  "thresholds_raw": [
+    {
+      "threshold": 0.5,
+      "fire_count": 467,
+      "fire_rate": 0.06951473652872879,
+      "dir_fire_count": 467,
+      "dir_fire_rate": 0.06951473652872879,
+      "dir_hit_rate": 0.31905781584582443,
+      "long_fire_count": 350,
+      "long_hit_rate": 0.34285714285714286,
+      "short_fire_count": 117,
+      "short_hit_rate": 0.24786324786324787
+    },
+    {
+      "threshold": 0.55,
+      "fire_count": 60,
+      "fire_rate": 0.008931229532598988,
+      "dir_fire_count": 60,
+      "dir_fire_rate": 0.008931229532598988,
+      "dir_hit_rate": 0.35,
+      "long_fire_count": 60,
+      "long_hit_rate": 0.35,
+      "short_fire_count": 0,
+      "short_hit_rate": null
+    },
+    {
+      "threshold": 0.6,
+      "fire_count": 0,
+      "fire_rate": 0.0,
+      "dir_fire_count": 0,
+      "dir_fire_rate": 0.0,
+      "dir_hit_rate": null,
+      "long_fire_count": 0,
+      "long_hit_rate": null,
+      "short_fire_count": 0,
+      "short_hit_rate": null
+    },
+    {
+      "threshold": 0.65,
+      "fire_count": 0,
+      "fire_rate": 0.0,
+      "dir_fire_count": 0,
+      "dir_fire_rate": 0.0,
+      "dir_hit_rate": null,
+      "long_fire_count": 0,
+      "long_hit_rate": null,
+      "short_fire_count": 0,
+      "short_hit_rate": null
+    },
+    {
+      "threshold": 0.7,
+      "fire_count": 0,
+      "fire_rate": 0.0,
+      "dir_fire_count": 0,
+      "dir_fire_rate": 0.0,
+      "dir_hit_rate": null,
+      "long_fire_count": 0,
+      "long_hit_rate": null,
+      "short_fire_count": 0,
+      "short_hit_rate": null
+    }
+  ],
+  "thresholds_calibrated": [
+    {
+      "threshold": 0.5,
+      "fire_count": 40,
+      "fire_rate": 0.005954153021732658,
+      "dir_fire_count": 40,
+      "dir_fire_rate": 0.005954153021732658,
+      "dir_hit_rate": 0.5,
+      "long_fire_count": 40,
+      "long_hit_rate": 0.5,
+      "short_fire_count": 0,
+      "short_hit_rate": null
+    },
+    {
+      "threshold": 0.55,
+      "fire_count": 0,
+      "fire_rate": 0.0,
+      "dir_fire_count": 0,
+      "dir_fire_rate": 0.0,
+      "dir_hit_rate": null,
+      "long_fire_count": 0,
+      "long_hit_rate": null,
+      "short_fire_count": 0,
+      "short_hit_rate": null
+    },
+    {
+      "threshold": 0.6,
+      "fire_count": 0,
+      "fire_rate": 0.0,
+      "dir_fire_count": 0,
+      "dir_fire_rate": 0.0,
+      "dir_hit_rate": null,
+      "long_fire_count": 0,
+      "long_hit_rate": null,
+      "short_fire_count": 0,
+      "short_hit_rate": null
+    },
+    {
+      "threshold": 0.65,
+      "fire_count": 0,
+      "fire_rate": 0.0,
+      "dir_fire_count": 0,
+      "dir_fire_rate": 0.0,
+      "dir_hit_rate": null,
+      "long_fire_count": 0,
+      "long_hit_rate": null,
+      "short_fire_count": 0,
+      "short_hit_rate": null
+    },
+    {
+      "threshold": 0.7,
+      "fire_count": 0,
+      "fire_rate": 0.0,
+      "dir_fire_count": 0,
+      "dir_fire_rate": 0.0,
+      "dir_hit_rate": null,
+      "long_fire_count": 0,
+      "long_hit_rate": null,
+      "short_fire_count": 0,
+      "short_hit_rate": null
+    }
+  ]
+}

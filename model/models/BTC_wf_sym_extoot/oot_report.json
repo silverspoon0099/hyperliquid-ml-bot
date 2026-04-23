@@ -1,0 +1,139 @@
+{
+  "symbol": "BTC",
+  "tag": "sym_extoot",
+  "oot_start": "2026-01-01",
+  "oot_end": "2026-04-21 07:45:00+00:00",
+  "n_samples": 31774,
+  "label_distribution": {
+    "LONG": 0.3752753823881161,
+    "SHORT": 0.3924592434065588,
+    "NEUTRAL": 0.23226537420532511
+  },
+  "prior_entropy": 1.0739599288332435,
+  "raw_log_loss": 1.0714286754460218,
+  "calibrated_log_loss": 1.0568379365976721,
+  "thresholds_raw": [
+    {
+      "threshold": 0.5,
+      "fire_count": 12396,
+      "fire_rate": 0.39013029520992004,
+      "dir_fire_count": 12392,
+      "dir_fire_rate": 0.39000440611820986,
+      "dir_hit_rate": 0.395255003227889,
+      "long_fire_count": 11823,
+      "long_hit_rate": 0.38738052947644425,
+      "short_fire_count": 569,
+      "short_hit_rate": 0.5588752196836555
+    },
+    {
+      "threshold": 0.55,
+      "fire_count": 5954,
+      "fire_rate": 0.18738591301063762,
+      "dir_fire_count": 5954,
+      "dir_fire_rate": 0.18738591301063762,
+      "dir_hit_rate": 0.38679879072892176,
+      "long_fire_count": 5875,
+      "long_hit_rate": 0.38127659574468087,
+      "short_fire_count": 79,
+      "short_hit_rate": 0.7974683544303798
+    },
+    {
+      "threshold": 0.6,
+      "fire_count": 1733,
+      "fire_rate": 0.05454144898344558,
+      "dir_fire_count": 1733,
+      "dir_fire_rate": 0.05454144898344558,
+      "dir_hit_rate": 0.3721869590305828,
+      "long_fire_count": 1725,
+      "long_hit_rate": 0.36927536231884056,
+      "short_fire_count": 8,
+      "short_hit_rate": 1.0
+    },
+    {
+      "threshold": 0.65,
+      "fire_count": 224,
+      "fire_rate": 0.007049789135771385,
+      "dir_fire_count": 224,
+      "dir_fire_rate": 0.007049789135771385,
+      "dir_hit_rate": 0.4107142857142857,
+      "long_fire_count": 224,
+      "long_hit_rate": 0.4107142857142857,
+      "short_fire_count": 0,
+      "short_hit_rate": null
+    },
+    {
+      "threshold": 0.7,
+      "fire_count": 0,
+      "fire_rate": 0.0,
+      "dir_fire_count": 0,
+      "dir_fire_rate": 0.0,
+      "dir_hit_rate": null,
+      "long_fire_count": 0,
+      "long_hit_rate": null,
+      "short_fire_count": 0,
+      "short_hit_rate": null
+    }
+  ],
+  "thresholds_calibrated": [
+    {
+      "threshold": 0.5,
+      "fire_count": 7282,
+      "fire_rate": 0.22918109145842513,
+      "dir_fire_count": 7247,
+      "dir_fire_rate": 0.22807956190596085,
+      "dir_hit_rate": 0.38443493859528083,
+      "long_fire_count": 7092,
+      "long_hit_rate": 0.3767625493513818,
+      "short_fire_count": 155,
+      "short_hit_rate": 0.7354838709677419
+    },
+    {
+      "threshold": 0.55,
+      "fire_count": 3186,
+      "fire_rate": 0.10027066154717694,
+      "dir_fire_count": 3183,
+      "dir_fire_rate": 0.10017624472839429,
+      "dir_hit_rate": 0.3986804901036758,
+      "long_fire_count": 3153,
+      "long_hit_rate": 0.3939105613701237,
+      "short_fire_count": 30,
+      "short_hit_rate": 0.9
+    },
+    {
+      "threshold": 0.6,
+      "fire_count": 1251,
+      "fire_rate": 0.039371813432366086,
+      "dir_fire_count": 1249,
+      "dir_fire_rate": 0.039308868886510986,
+      "dir_hit_rate": 0.38270616493194554,
+      "long_fire_count": 1249,
+      "long_hit_rate": 0.38270616493194554,
+      "short_fire_count": 0,
+      "short_hit_rate": null
+    },
+    {
+      "threshold": 0.65,
+      "fire_count": 585,
+      "fire_rate": 0.018411279662617235,
+      "dir_fire_count": 585,
+      "dir_fire_rate": 0.018411279662617235,
+      "dir_hit_rate": 0.39145299145299145,
+      "long_fire_count": 585,
+      "long_hit_rate": 0.39145299145299145,
+      "short_fire_count": 0,
+      "short_hit_rate": null
+    },
+    {
+      "threshold": 0.7,
+      "fire_count": 221,
+      "fire_rate": 0.006955372316988733,
+      "dir_fire_count": 221,
+      "dir_fire_rate": 0.006955372316988733,
+      "dir_hit_rate": 0.3936651583710407,
+      "long_fire_count": 221,
+      "long_hit_rate": 0.3936651583710407,
+      "short_fire_count": 0,
+      "short_hit_rate": null
+    }
+  ]
+}

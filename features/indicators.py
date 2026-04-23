@@ -331,3 +331,21 @@ def ema_features_1h(close_1h: pd.Series, periods: list[int]) -> pd.DataFrame:
         score += np.sign(close_1h - emas[9])
     out["ema_stack_1h"] = score
     return pd.DataFrame(out)
+
+
+def ema_features_1d(close_1d: pd.Series, periods: list[int]) -> pd.DataFrame:
+    """Daily-timeframe EMA distance features. Caller must shift by 1 to avoid look-ahead."""
+    out = {}
+    emas = {}
+    for p in periods:
+        emas[p] = close_1d.ewm(span=p, adjust=False, min_periods=p).mean()
+        out[f"ema{p}_1d_dist_pct"] = pct(close_1d - emas[p], close_1d)
+    score = pd.Series(0, index=close_1d.index, dtype=float)
+    if 20 in emas and 50 in emas:
+        score += np.sign(emas[20] - emas[50])
+    if 50 in emas and 200 in emas:
+        score += np.sign(emas[50] - emas[200])
+    if 20 in emas:
+        score += np.sign(close_1d - emas[20])
+    out["ema_stack_1d"] = score
+    return pd.DataFrame(out)

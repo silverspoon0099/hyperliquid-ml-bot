@@ -1,0 +1,139 @@
+{
+  "symbol": "BTC",
+  "tag": "scalp_trim",
+  "oot_start": "2026-01-01",
+  "oot_end": "2026-04-21 10:15:00+00:00",
+  "n_samples": 31804,
+  "label_distribution": {
+    "LONG": 0.3165325116337568,
+    "SHORT": 0.4866997861904163,
+    "NEUTRAL": 0.19676770217582695
+  },
+  "prior_entropy": 1.034484378374438,
+  "raw_log_loss": 1.0343529878011883,
+  "calibrated_log_loss": 1.028974685682709,
+  "thresholds_raw": [
+    {
+      "threshold": 0.5,
+      "fire_count": 8885,
+      "fire_rate": 0.2793673751729342,
+      "dir_fire_count": 8885,
+      "dir_fire_rate": 0.2793673751729342,
+      "dir_hit_rate": 0.496229600450197,
+      "long_fire_count": 2524,
+      "long_hit_rate": 0.40649762282091917,
+      "short_fire_count": 6361,
+      "short_hit_rate": 0.5318346171985537
+    },
+    {
+      "threshold": 0.55,
+      "fire_count": 2223,
+      "fire_rate": 0.0698968683184505,
+      "dir_fire_count": 2223,
+      "dir_fire_rate": 0.0698968683184505,
+      "dir_hit_rate": 0.5362123256860098,
+      "long_fire_count": 193,
+      "long_hit_rate": 0.44559585492227977,
+      "short_fire_count": 2030,
+      "short_hit_rate": 0.5448275862068965
+    },
+    {
+      "threshold": 0.6,
+      "fire_count": 246,
+      "fire_rate": 0.007734876116211797,
+      "dir_fire_count": 246,
+      "dir_fire_rate": 0.007734876116211797,
+      "dir_hit_rate": 0.6341463414634146,
+      "long_fire_count": 0,
+      "long_hit_rate": null,
+      "short_fire_count": 246,
+      "short_hit_rate": 0.6341463414634146
+    },
+    {
+      "threshold": 0.65,
+      "fire_count": 4,
+      "fire_rate": 0.00012577034335303736,
+      "dir_fire_count": 4,
+      "dir_fire_rate": 0.00012577034335303736,
+      "dir_hit_rate": 1.0,
+      "long_fire_count": 0,
+      "long_hit_rate": null,
+      "short_fire_count": 4,
+      "short_hit_rate": 1.0
+    },
+    {
+      "threshold": 0.7,
+      "fire_count": 0,
+      "fire_rate": 0.0,
+      "dir_fire_count": 0,
+      "dir_fire_rate": 0.0,
+      "dir_hit_rate": null,
+      "long_fire_count": 0,
+      "long_hit_rate": null,
+      "short_fire_count": 0,
+      "short_hit_rate": null
+    }
+  ],
+  "thresholds_calibrated": [
+    {
+      "threshold": 0.5,
+      "fire_count": 12697,
+      "fire_rate": 0.3992265123883788,
+      "dir_fire_count": 12697,
+      "dir_fire_rate": 0.3992265123883788,
+      "dir_hit_rate": 0.5064975978577617,
+      "long_fire_count": 3467,
+      "long_hit_rate": 0.4115950389385636,
+      "short_fire_count": 9230,
+      "short_hit_rate": 0.5421451787648971
+    },
+    {
+      "threshold": 0.55,
+      "fire_count": 4826,
+      "fire_rate": 0.15174191925543956,
+      "dir_fire_count": 4826,
+      "dir_fire_rate": 0.15174191925543956,
+      "dir_hit_rate": 0.4888106092001658,
+      "long_fire_count": 1814,
+      "long_hit_rate": 0.39966923925027564,
+      "short_fire_count": 3012,
+      "short_hit_rate": 0.5424966799468791
+    },
+    {
+      "threshold": 0.6,
+      "fire_count": 1270,
+      "fire_rate": 0.03993208401458936,
+      "dir_fire_count": 1270,
+      "dir_fire_rate": 0.03993208401458936,
+      "dir_hit_rate": 0.4818897637795276,
+      "long_fire_count": 551,
+      "long_hit_rate": 0.40834845735027225,
+      "short_fire_count": 719,
+      "short_hit_rate": 0.5382475660639777
+    },
+    {
+      "threshold": 0.65,
+      "fire_count": 477,
+      "fire_rate": 0.014998113444849704,
+      "dir_fire_count": 477,
+      "dir_fire_rate": 0.014998113444849704,
+      "dir_hit_rate": 0.4339622641509434,
+      "long_fire_count": 454,
+      "long_hit_rate": 0.41629955947136565,
+      "short_fire_count": 23,
+      "short_hit_rate": 0.782608695652174
+    },
+    {
+      "threshold": 0.7,
+      "fire_count": 203,
+      "fire_rate": 0.006382844925166646,
+      "dir_fire_count": 203,
+      "dir_fire_rate": 0.006382844925166646,
+      "dir_hit_rate": 0.4088669950738916,
+      "long_fire_count": 203,
+      "long_hit_rate": 0.4088669950738916,
+      "short_fire_count": 0,
+      "short_hit_rate": null
+    }
+  ]
+}

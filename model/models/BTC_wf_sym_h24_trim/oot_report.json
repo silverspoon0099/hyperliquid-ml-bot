@@ -1,0 +1,139 @@
+{
+  "symbol": "BTC",
+  "tag": "sym_h24_trim",
+  "oot_start": "2026-01-01",
+  "oot_end": "2026-04-21 09:45:00+00:00",
+  "n_samples": 31798,
+  "label_distribution": {
+    "LONG": 0.32297628781684384,
+    "SHORT": 0.33127869677338195,
+    "NEUTRAL": 0.3457450154097742
+  },
+  "prior_entropy": 1.0982150888917548,
+  "raw_log_loss": 1.0945855823193786,
+  "calibrated_log_loss": 1.1021640707907783,
+  "thresholds_raw": [
+    {
+      "threshold": 0.5,
+      "fire_count": 5660,
+      "fire_rate": 0.1779986162651739,
+      "dir_fire_count": 5405,
+      "dir_fire_rate": 0.16997924397760866,
+      "dir_hit_rate": 0.39814986123959295,
+      "long_fire_count": 5071,
+      "long_hit_rate": 0.3999211200946559,
+      "short_fire_count": 334,
+      "short_hit_rate": 0.3712574850299401
+    },
+    {
+      "threshold": 0.55,
+      "fire_count": 1917,
+      "fire_rate": 0.06028681049122586,
+      "dir_fire_count": 1843,
+      "dir_fire_rate": 0.0579596201018932,
+      "dir_hit_rate": 0.45577862181226264,
+      "long_fire_count": 1728,
+      "long_hit_rate": 0.4600694444444444,
+      "short_fire_count": 115,
+      "short_hit_rate": 0.391304347826087
+    },
+    {
+      "threshold": 0.6,
+      "fire_count": 451,
+      "fire_rate": 0.014183281967419335,
+      "dir_fire_count": 440,
+      "dir_fire_rate": 0.013837348260896911,
+      "dir_hit_rate": 0.5045454545454545,
+      "long_fire_count": 434,
+      "long_hit_rate": 0.5023041474654378,
+      "short_fire_count": 6,
+      "short_hit_rate": 0.6666666666666666
+    },
+    {
+      "threshold": 0.65,
+      "fire_count": 51,
+      "fire_rate": 0.0016038744575130512,
+      "dir_fire_count": 51,
+      "dir_fire_rate": 0.0016038744575130512,
+      "dir_hit_rate": 0.6274509803921569,
+      "long_fire_count": 51,
+      "long_hit_rate": 0.6274509803921569,
+      "short_fire_count": 0,
+      "short_hit_rate": null
+    },
+    {
+      "threshold": 0.7,
+      "fire_count": 0,
+      "fire_rate": 0.0,
+      "dir_fire_count": 0,
+      "dir_fire_rate": 0.0,
+      "dir_hit_rate": null,
+      "long_fire_count": 0,
+      "long_hit_rate": null,
+      "short_fire_count": 0,
+      "short_hit_rate": null
+    }
+  ],
+  "thresholds_calibrated": [
+    {
+      "threshold": 0.5,
+      "fire_count": 8935,
+      "fire_rate": 0.2809925152525316,
+      "dir_fire_count": 8265,
+      "dir_fire_rate": 0.2599220076734386,
+      "dir_hit_rate": 0.39019963702359345,
+      "long_fire_count": 7764,
+      "long_hit_rate": 0.39077794951056155,
+      "short_fire_count": 501,
+      "short_hit_rate": 0.3812375249500998
+    },
+    {
+      "threshold": 0.55,
+      "fire_count": 3571,
+      "fire_rate": 0.11230266054468835,
+      "dir_fire_count": 3323,
+      "dir_fire_rate": 0.10450342788854645,
+      "dir_hit_rate": 0.422810713210954,
+      "long_fire_count": 3089,
+      "long_hit_rate": 0.4214956296536096,
+      "short_fire_count": 234,
+      "short_hit_rate": 0.44017094017094016
+    },
+    {
+      "threshold": 0.6,
+      "fire_count": 1736,
+      "fire_rate": 0.05459462859299327,
+      "dir_fire_count": 1614,
+      "dir_fire_rate": 0.05075790930247186,
+      "dir_hit_rate": 0.46592317224287483,
+      "long_fire_count": 1519,
+      "long_hit_rate": 0.46543778801843316,
+      "short_fire_count": 95,
+      "short_hit_rate": 0.47368421052631576
+    },
+    {
+      "threshold": 0.65,
+      "fire_count": 1555,
+      "fire_rate": 0.048902446694760675,
+      "dir_fire_count": 1545,
+      "dir_fire_rate": 0.04858796150701302,
+      "dir_hit_rate": 0.4627831715210356,
+      "long_fire_count": 1509,
+      "long_hit_rate": 0.464546056991385,
+      "short_fire_count": 36,
+      "short_hit_rate": 0.3888888888888889
+    },
+    {
+      "threshold": 0.7,
+      "fire_count": 829,
+      "fire_rate": 0.026070822064280772,
+      "dir_fire_count": 829,
+      "dir_fire_rate": 0.026070822064280772,
+      "dir_hit_rate": 0.4764776839565742,
+      "long_fire_count": 824,
+      "long_hit_rate": 0.47815533980582525,
+      "short_fire_count": 5,
+      "short_hit_rate": 0.2
+    }
+  ]
+}

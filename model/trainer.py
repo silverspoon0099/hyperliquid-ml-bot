@@ -165,7 +165,8 @@ def evaluate_fold(
 
 def walk_forward(symbol: str, cfg: dict, use_weights: bool, tag: str = "",
                  best_params_path: Path | None = None,
-                 feature_list_path: Path | None = None) -> dict:
+                 feature_list_path: Path | None = None,
+                 max_train_date: str | None = None) -> dict:
     classes = cfg["labeling"]["classes"]
     n_classes = len(classes)
     inv_classes = {v: k for k, v in classes.items()}
@@ -181,6 +182,15 @@ def walk_forward(symbol: str, cfg: dict, use_weights: bool, tag: str = "",
     df = pd.read_parquet(parquet_path)
     df = df[df["label"] >= 0].reset_index(drop=True)
     df["_ts"] = pd.to_datetime(df["timestamp"], unit="ms", utc=True)
+
+    if max_train_date is not None:
+        cutoff = pd.Timestamp(max_train_date, tz="UTC")
+        n_before = len(df)
+        df = df[df["_ts"] < cutoff].reset_index(drop=True)
+        log.info(
+            f"max_train_date={max_train_date}: truncated {n_before:,} -> {len(df):,} rows "
+            f"(reserves post-cutoff for OOT)"
+        )
 
     feat_cols = feature_columns(df)
     if feature_list_path is not None:
@@ -365,6 +375,11 @@ def main() -> None:
         "--feature-list", default=None,
         help="path to selected_features.json (spec §2.5 trim)",
     )
+    ap.add_argument(
+        "--max-train-date", default=None,
+        help="ISO date (UTC); rows with _ts >= this date are dropped before "
+             "fold construction, so they can serve as OOT holdout",
+    )
     args = ap.parse_args()
     cfg = load_config()
     use_weights = cfg["walk_forward"]["use_class_weights"] if args.class_weights is None else args.class_weights
@@ -372,7 +387,8 @@ def main() -> None:
     feature_list_path = Path(args.feature_list) if args.feature_list else None
     walk_forward(args.symbol, cfg, use_weights=use_weights, tag=args.tag,
                  best_params_path=best_params_path,
-                 feature_list_path=feature_list_path)
+                 feature_list_path=feature_list_path,
+                 max_train_date=args.max_train_date)
 
 
 if __name__ == "__main__":

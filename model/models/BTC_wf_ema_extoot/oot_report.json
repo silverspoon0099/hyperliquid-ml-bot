@@ -1,0 +1,139 @@
+{
+  "symbol": "BTC",
+  "tag": "ema_extoot",
+  "oot_start": "2026-01-01",
+  "oot_end": "2026-04-21 07:45:00+00:00",
+  "n_samples": 31774,
+  "label_distribution": {
+    "LONG": 0.3752753823881161,
+    "SHORT": 0.3924592434065588,
+    "NEUTRAL": 0.23226537420532511
+  },
+  "prior_entropy": 1.0739599288332435,
+  "raw_log_loss": 1.0714402044666143,
+  "calibrated_log_loss": 1.0555169935480984,
+  "thresholds_raw": [
+    {
+      "threshold": 0.5,
+      "fire_count": 12483,
+      "fire_rate": 0.39286838295461696,
+      "dir_fire_count": 12483,
+      "dir_fire_rate": 0.39286838295461696,
+      "dir_hit_rate": 0.40430986141151964,
+      "long_fire_count": 12102,
+      "long_hit_rate": 0.39894232358287884,
+      "short_fire_count": 381,
+      "short_hit_rate": 0.5748031496062992
+    },
+    {
+      "threshold": 0.55,
+      "fire_count": 6130,
+      "fire_rate": 0.19292503304588657,
+      "dir_fire_count": 6130,
+      "dir_fire_rate": 0.19292503304588657,
+      "dir_hit_rate": 0.37520391517128876,
+      "long_fire_count": 6092,
+      "long_hit_rate": 0.37245567957977677,
+      "short_fire_count": 38,
+      "short_hit_rate": 0.8157894736842105
+    },
+    {
+      "threshold": 0.6,
+      "fire_count": 1887,
+      "fire_rate": 0.05938817901428841,
+      "dir_fire_count": 1887,
+      "dir_fire_rate": 0.05938817901428841,
+      "dir_hit_rate": 0.3624801271860095,
+      "long_fire_count": 1884,
+      "long_hit_rate": 0.3614649681528662,
+      "short_fire_count": 3,
+      "short_hit_rate": 1.0
+    },
+    {
+      "threshold": 0.65,
+      "fire_count": 223,
+      "fire_rate": 0.007018316862843835,
+      "dir_fire_count": 223,
+      "dir_fire_rate": 0.007018316862843835,
+      "dir_hit_rate": 0.4977578475336323,
+      "long_fire_count": 223,
+      "long_hit_rate": 0.4977578475336323,
+      "short_fire_count": 0,
+      "short_hit_rate": null
+    },
+    {
+      "threshold": 0.7,
+      "fire_count": 4,
+      "fire_rate": 0.0001258890917102033,
+      "dir_fire_count": 4,
+      "dir_fire_rate": 0.0001258890917102033,
+      "dir_hit_rate": 0.5,
+      "long_fire_count": 4,
+      "long_hit_rate": 0.5,
+      "short_fire_count": 0,
+      "short_hit_rate": null
+    }
+  ],
+  "thresholds_calibrated": [
+    {
+      "threshold": 0.5,
+      "fire_count": 6219,
+      "fire_rate": 0.1957260653364386,
+      "dir_fire_count": 6217,
+      "dir_fire_rate": 0.19566312079058348,
+      "dir_hit_rate": 0.38217789930834806,
+      "long_fire_count": 6124,
+      "long_hit_rate": 0.3765512736773351,
+      "short_fire_count": 93,
+      "short_hit_rate": 0.7526881720430108
+    },
+    {
+      "threshold": 0.55,
+      "fire_count": 2332,
+      "fire_rate": 0.07339334046704853,
+      "dir_fire_count": 2332,
+      "dir_fire_rate": 0.07339334046704853,
+      "dir_hit_rate": 0.3632075471698113,
+      "long_fire_count": 2317,
+      "long_hit_rate": 0.3599482088908071,
+      "short_fire_count": 15,
+      "short_hit_rate": 0.8666666666666667
+    },
+    {
+      "threshold": 0.6,
+      "fire_count": 1126,
+      "fire_rate": 0.03543777931642223,
+      "dir_fire_count": 1126,
+      "dir_fire_rate": 0.03543777931642223,
+      "dir_hit_rate": 0.37211367673179396,
+      "long_fire_count": 1123,
+      "long_hit_rate": 0.37043633125556547,
+      "short_fire_count": 3,
+      "short_hit_rate": 1.0
+    },
+    {
+      "threshold": 0.65,
+      "fire_count": 513,
+      "fire_rate": 0.016145276011833576,
+      "dir_fire_count": 513,
+      "dir_fire_rate": 0.016145276011833576,
+      "dir_hit_rate": 0.4152046783625731,
+      "long_fire_count": 513,
+      "long_hit_rate": 0.4152046783625731,
+      "short_fire_count": 0,
+      "short_hit_rate": null
+    },
+    {
+      "threshold": 0.7,
+      "fire_count": 200,
+      "fire_rate": 0.006294454585510165,
+      "dir_fire_count": 200,
+      "dir_fire_rate": 0.006294454585510165,
+      "dir_hit_rate": 0.515,
+      "long_fire_count": 200,
+      "long_hit_rate": 0.515,
+      "short_fire_count": 0,
+      "short_hit_rate": null
+    }
+  ]
+}

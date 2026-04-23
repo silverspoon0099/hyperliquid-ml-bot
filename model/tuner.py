@@ -57,7 +57,8 @@ def _suggest(trial: optuna.Trial, space: dict) -> dict:
     }
 
 
-def run(symbol: str, cfg: dict, n_trials: int | None = None, timeout: int | None = None) -> dict:
+def run(symbol: str, cfg: dict, n_trials: int | None = None, timeout: int | None = None,
+        feature_list_path: Path | None = None, out_name: str = "best_params.json") -> dict:
     tcfg = cfg["tuning"]
     n_trials = n_trials or tcfg["n_trials"]
     timeout = timeout or tcfg["timeout_sec"]
@@ -71,6 +72,13 @@ def run(symbol: str, cfg: dict, n_trials: int | None = None, timeout: int | None
     df = df[df["label"] >= 0].reset_index(drop=True)
     df["_ts"] = pd.to_datetime(df["timestamp"], unit="ms", utc=True)
     feat_cols = feature_columns(df)
+    if feature_list_path is not None:
+        sel = json.loads(feature_list_path.read_text())["features"]
+        missing = [c for c in sel if c not in feat_cols]
+        if missing:
+            raise ValueError(f"feature-list references {len(missing)} columns absent from parquet")
+        feat_cols = sel
+        log.info(f"restricted to {len(feat_cols)} features from {feature_list_path}")
     n_classes = len(cfg["labeling"]["classes"])
 
     wf = cfg["walk_forward"]
@@ -176,9 +184,9 @@ def run(symbol: str, cfg: dict, n_trials: int | None = None, timeout: int | None
             if k not in study.best_params  # what we did NOT tune
         },
     }
-    with open(out_dir / "best_params.json", "w") as f:
+    with open(out_dir / out_name, "w") as f:
         json.dump(result, f, indent=2)
-    log.info(f"saved -> {out_dir / 'best_params.json'}")
+    log.info(f"saved -> {out_dir / out_name}")
 
     return result
 
@@ -188,9 +196,15 @@ def main() -> None:
     ap.add_argument("--symbol", default="BTC")
     ap.add_argument("--n-trials", type=int, default=None, help="override tuning.n_trials")
     ap.add_argument("--timeout", type=int, default=None, help="override tuning.timeout_sec")
+    ap.add_argument("--feature-list", default=None,
+                    help="path to selected_features.json — tune on this subset")
+    ap.add_argument("--out-name", default="best_params.json",
+                    help="output filename under BTC_wf/, e.g. best_params_sym.json")
     args = ap.parse_args()
     cfg = load_config()
-    run(args.symbol, cfg, n_trials=args.n_trials, timeout=args.timeout)
+    fl = Path(args.feature_list) if args.feature_list else None
+    run(args.symbol, cfg, n_trials=args.n_trials, timeout=args.timeout,
+        feature_list_path=fl, out_name=args.out_name)
 
 
 if __name__ == "__main__":

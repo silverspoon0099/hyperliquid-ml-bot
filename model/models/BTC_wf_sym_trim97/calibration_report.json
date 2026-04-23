@@ -1,0 +1,17 @@
+{
+  "symbol": "BTC",
+  "tag": "sym_trim97",
+  "n_oof_rows": 69984,
+  "raw_log_loss": 1.042625453654495,
+  "calibrated_log_loss": 1.0312324733191205,
+  "raw_brier": {
+    "LONG": 0.23090182316881838,
+    "SHORT": 0.23620268039036582,
+    "NEUTRAL": 0.1692698764361069
+  },
+  "calibrated_brier": {
+    "LONG": 0.22815555269532653,
+    "SHORT": 0.2336757340066337,
+    "NEUTRAL": 0.16780805262876253
+  }
+}

@@ -26,6 +26,7 @@ from . import (
     candles,
     context,
     divergence,
+    ema_context,
     event_memory,
     extra_momentum,
     ichimoku,
@@ -141,6 +142,15 @@ def build_features(symbol: str, cfg: dict) -> pd.DataFrame:
     pivots_df = pivots.pivot_features(df_5m, day_id, fcfg["pivots"]["test_tolerance_pct"])
     parts.append(pivots_df)
 
+    # ── Weekly Pivots (Cat 6b) ────────────────────────────────────────────
+    # Monday 00:00 UTC boundary — prior-week H/L/C → current-week levels.
+    log.info("Computing Weekly Fibonacci pivots")
+    week_id = ts_5m.dt.floor("1D") - pd.to_timedelta(ts_5m.dt.dayofweek, unit="D")
+    weekly_pivots_df = pivots.weekly_pivot_features(
+        df_5m, week_id, fcfg["pivots"]["test_tolerance_pct"]
+    )
+    parts.append(weekly_pivots_df)
+
     # ── Sessions (Cat 7) ──────────────────────────────────────────────────
     log.info("Computing sessions (Cat 7)")
     sess_df = sessions.session_features(df_5m)
@@ -150,6 +160,19 @@ def build_features(symbol: str, cfg: dict) -> pd.DataFrame:
     log.info("Computing candles (Cat 8)")
     candle_df = candles.candle_features(df_5m)
     parts.append(candle_df)
+
+    # ── EMA / level context (Tier-1 setup features) ──────────────────────
+    log.info("Computing EMA/level context (touches, confluence, MTF, pullback)")
+    pivot_level_cols = [f"pivot_{n}" for n in ("S3", "S2", "S1", "P", "R1", "R2", "R3")]
+    ema_ctx_df = ema_context.ema_context_features(
+        df_5m,
+        df_1h,
+        pivots_df[pivot_level_cols],
+        vol_df["atr_14"],
+        candle_df["pin_bar"],
+        candle_df["engulfing"],
+    )
+    parts.append(ema_ctx_df)
 
     # ── Mean reversion / stats (Cat 9) ────────────────────────────────────
     log.info("Computing mean-reversion (Cat 9)")
@@ -268,13 +291,32 @@ def build_features(symbol: str, cfg: dict) -> pd.DataFrame:
             ),
             indicators.macd_features_1h(df_1h["close"], fcfg["macd"]),
             indicators.adx_features_1h(df_1h["high"], df_1h["low"], df_1h["close"], fcfg["adx"]),
-            indicators.ema_features_1h(df_1h["close"], fcfg["ema_periods"]),
+            indicators.ema_features_1h(df_1h["close"], fcfg.get("ema_periods_1h", fcfg["ema_periods"])),
             volume.vfi_features_1h(df_1h["close"], df_1h["high"], df_1h["low"], df_1h["volume"], fcfg["vfi"]),
         ],
         axis=1,
     )
     feats_1h_mapped = merge_1h_into_5m(df_5m, feats_1h, df_1h["timestamp"])
     parts.append(feats_1h_mapped)
+
+    # ── 1D EMA features ───────────────────────────────────────────────────
+    # Daily close built from 5m, then EMA + shift(1) so today sees only prior-day
+    # values (mirrors the pivots.py contract: prior-day H/L/C → today's levels).
+    # day_id must be tz-naive on both sides of the reindex — pandas strips tz
+    # from `.values`, breaking lookup against a tz-aware groupby index (see
+    # pivots.py for the same gotcha).
+    ema_periods_1d = fcfg.get("ema_periods_1d")
+    if ema_periods_1d:
+        log.info(f"Computing 1D EMA features (periods={ema_periods_1d})")
+        day_id_naive = (
+            day_id.dt.tz_localize(None) if getattr(day_id.dtype, "tz", None) is not None else day_id
+        )
+        daily_close = df_5m.groupby(day_id_naive)["close"].last()
+        ema_1d = indicators.ema_features_1d(daily_close, ema_periods_1d)
+        ema_1d = ema_1d.shift(1)                        # no look-ahead
+        ema_1d_mapped = ema_1d.reindex(day_id_naive.values).reset_index(drop=True)
+        ema_1d_mapped.index = df_5m.index
+        parts.append(ema_1d_mapped)
 
     # ── Assemble ──────────────────────────────────────────────────────────
     log.info("Assembling feature matrix")

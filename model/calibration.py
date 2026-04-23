@@ -38,20 +38,28 @@ log = get_logger("calibration")
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
-def fit(symbol: str, cfg: dict, tag: str) -> dict:
+def fit(symbol: str, cfg: dict, tag: str, max_train_date: str | None = None) -> dict:
     suffix = f"_{tag}" if tag else ""
     model_dir = PROJECT_ROOT / "model" / "models" / f"{symbol}_wf{suffix}"
-    sel_path = PROJECT_ROOT / "model" / "models" / f"{symbol}_wf" / "selected_features.json"
+    local_sel = model_dir / "selected_features.json"
+    base_sel = PROJECT_ROOT / "model" / "models" / f"{symbol}_wf" / "selected_features.json"
+    sel_path = local_sel if local_sel.exists() else base_sel
     if not sel_path.exists():
         raise FileNotFoundError(
-            f"missing {sel_path} — calibration uses the trimmed feature set"
+            f"missing selected_features.json in {model_dir} or base wf dir"
         )
     selected = json.loads(sel_path.read_text())["features"]
+    log.info(f"using {len(selected)} features from {sel_path}")
 
     features_dir = PROJECT_ROOT / cfg["features"]["output_dir"]
     df = pd.read_parquet(features_dir / f"{symbol}_features.parquet")
     df = df[df["label"] >= 0].reset_index(drop=True)
     df["_ts"] = pd.to_datetime(df["timestamp"], unit="ms", utc=True)
+
+    if max_train_date is not None:
+        cutoff = pd.Timestamp(max_train_date, tz="UTC")
+        df = df[df["_ts"] < cutoff].reset_index(drop=True)
+        log.info(f"max_train_date={max_train_date}: truncated to {len(df):,} rows")
 
     classes = cfg["labeling"]["classes"]
     n_classes = len(classes)
@@ -138,9 +146,13 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--symbol", default="BTC")
     ap.add_argument("--tag", default="tuned_trim120")
+    ap.add_argument(
+        "--max-train-date", default=None,
+        help="must match the same flag used in trainer; recomputes identical folds",
+    )
     args = ap.parse_args()
     cfg = load_config()
-    fit(args.symbol, cfg, tag=args.tag)
+    fit(args.symbol, cfg, tag=args.tag, max_train_date=args.max_train_date)
 
 
 if __name__ == "__main__":
