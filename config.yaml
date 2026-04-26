@@ -196,15 +196,15 @@ labeling:
   # label asymmetry collapsed high-threshold hit rate to the random-walk floor.
   tp_atr_mult: 4.0
   sl_atr_mult: 4.0
-  max_holding_bars: 24           # 2 hours on 5min (was 48 = 4h) — sharper label Q
-  # min_profit_pct: timeout gate only (NOT a TP level). At max_holding_bars with
-  # no barrier hit, |drift| must exceed this to be LONG/SHORT, else NEUTRAL.
+  max_holding_bars: 48           # 4 hours on 5min — phase 2.5 canonical
+  # min_profit_pct: timeout gate only (NOT a TP level). At 48 bars with no
+  # barrier hit, |drift| must exceed this to be LONG/SHORT, else NEUTRAL.
   min_profit_pct:
-    BTC: 0.3
-    SOL: 0.5
-    LINK: 0.5
-    TAO: 0.7
-    HYPE: 0.7
+    BTC: 0.5
+    SOL: 0.8
+    LINK: 0.7
+    TAO: 1.0
+    HYPE: 1.0
   classes:
     LONG: 0
     SHORT: 1

@@ -115,7 +115,10 @@
       "Bash(tee /tmp/bin_short.log)",
       "Bash(python /tmp/binary_oot.py)",
       "Bash(PYTHONPATH=. python /tmp/binary_oot.py)",
-      "Bash(PYTHONPATH=/nvme1/projects/trading/ml-bot python /tmp/binary_oot.py)"
+      "Bash(PYTHONPATH=/nvme1/projects/trading/ml-bot python /tmp/binary_oot.py)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(f'n_features={d[\\\\\"n_selected\\\\\"]}'\\)\")",
+      "Bash(python -m scripts.oot_eval --symbol BTC --tag tuned_trim120 --oot-start 2026-01-01 --thresholds 0.50 0.55 0.60 0.65 0.70 0.75)",
+      "Bash(python3)"
     ],
     "additionalDirectories": [
       "/tmp",
